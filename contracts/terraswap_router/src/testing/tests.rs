@@ -322,6 +322,7 @@ fn execute_swap_operation() {
             ],
             contract_addr: "pair0000".to_string(),
             liquidity_token: "liquidity0000".to_string(),
+            asset_decimals: [6u8, 6u8],
         },
     )]);
     deps.querier.with_tax(
@@ -399,6 +400,7 @@ fn execute_swap_operation() {
             ],
             contract_addr: "pair0000".to_string(),
             liquidity_token: "liquidity0000".to_string(),
+            asset_decimals: [6u8, 6u8],
         },
     )]);
     deps.querier.with_token_balances(&[(
@@ -510,6 +512,7 @@ fn query_buy_with_routes() {
                 ],
                 contract_addr: "pair0000".to_string(),
                 liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [6u8, 6u8],
             },
         ),
         (
@@ -525,6 +528,7 @@ fn query_buy_with_routes() {
                 ],
                 contract_addr: "pair0001".to_string(),
                 liquidity_token: "liquidity0001".to_string(),
+                asset_decimals: [6u8, 6u8],
             },
         ),
     ]);
@@ -628,6 +632,7 @@ fn query_reverse_routes_with_from_native() {
                         denom: "ukrw".to_string(),
                     },
                 ],
+                asset_decimals: [8u8, 6u8],
             },
         ),
         (
@@ -643,6 +648,7 @@ fn query_reverse_routes_with_from_native() {
                         denom: "uluna".to_string(),
                     },
                 ],
+                asset_decimals: [8u8, 6u8],
             },
         ),
     ]);
@@ -764,6 +770,7 @@ fn query_reverse_routes_with_to_native() {
                         denom: "ukrw".to_string(),
                     },
                 ],
+                asset_decimals: [8u8, 6u8],
             },
         ),
         (
@@ -779,6 +786,7 @@ fn query_reverse_routes_with_to_native() {
                         denom: "uluna".to_string(),
                     },
                 ],
+                asset_decimals: [8u8, 6u8],
             },
         ),
     ]);

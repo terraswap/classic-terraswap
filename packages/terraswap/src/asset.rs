@@ -2,10 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{
-    query_active_denoms, query_balance, query_decimals, query_ibc_denom, query_supply,
-    query_token_balance,
-};
+use crate::querier::{query_balance, query_token_balance, query_token_info};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -181,15 +178,6 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(self, querier: &QuerierWrapper) -> StdResult<u8> {
-        match self {
-            AssetInfo::NativeToken { .. } => Ok(6u8),
-            AssetInfo::Token { contract_addr } => {
-                query_decimals(querier, Addr::unchecked(contract_addr))
-            }
-        }
-    }
-
     pub fn equal(&self, asset: &AssetInfo) -> bool {
         match self {
             AssetInfo::Token { contract_addr, .. } => {
@@ -209,23 +197,22 @@ impl AssetInfo {
         }
     }
 
-    pub fn is_valid(&self, querier: &QuerierWrapper) -> bool {
+    pub fn query_decimals(&self, account_addr: Addr, querier: &QuerierWrapper) -> StdResult<u8> {
         match self {
             AssetInfo::NativeToken { denom } => {
-                if denom == "uluna" {
-                    return true;
-                } else if denom.starts_with('u') {
-                    return query_active_denoms(querier)
-                        .map(|actives| actives.contains(denom))
-                        .unwrap_or(false);
-                } else if denom.starts_with("ibc") {
-                    return query_ibc_denom(querier, denom.to_string()).is_ok();
+                // check valid
+                if query_balance(querier, account_addr, denom.to_string())
+                    .unwrap()
+                    .is_zero()
+                {
+                    return Err(StdError::generic_err("invalid native token"));
                 }
 
-                false
+                Ok(6u8)
             }
             AssetInfo::Token { contract_addr } => {
-                query_supply(querier, Addr::unchecked(contract_addr)).is_ok()
+                let token_info = query_token_info(querier, Addr::unchecked(contract_addr)).unwrap();
+                Ok(token_info.decimals)
             }
         }
     }
@@ -306,6 +293,7 @@ pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
     pub contract_addr: String,
     pub liquidity_token: String,
+    pub asset_decimals: [u8; 2],
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -313,6 +301,7 @@ pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
+    pub asset_decimals: [u8; 2],
 }
 
 impl PairInfoRaw {
@@ -324,6 +313,7 @@ impl PairInfoRaw {
                 self.asset_infos[0].to_normal(api)?,
                 self.asset_infos[1].to_normal(api)?,
             ],
+            asset_decimals: self.asset_decimals,
         })
     }
 
