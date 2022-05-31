@@ -4,8 +4,8 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, WasmMsg,
 };
+use terraswap::querier::query_pair_info_from_pair;
 
-use crate::querier::query_liquidity_token;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{pair_key, read_pairs, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO};
 
@@ -168,7 +168,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         deps.storage,
         &tmp_pair_info.pair_key,
         &PairInfoRaw {
-            liquidity_token: deps.api.addr_canonicalize(liquidity_token.as_str())?,
+            liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
             contract_addr: deps.api.addr_canonicalize(pair_contract)?,
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
@@ -177,7 +177,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     Ok(Response::new().add_attributes(vec![
         ("pair_contract_addr", pair_contract),
-        ("liquidity_token_addr", liquidity_token.as_str()),
+        ("liquidity_token_addr", pair_info.liquidity_token.as_str()),
     ]))
 }
 
