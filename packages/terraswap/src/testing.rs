@@ -5,7 +5,10 @@ use crate::querier::{
 };
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, coin, Addr, Api, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg, MessageInfo, StdError};
+use cosmwasm_std::{
+    coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Decimal, MessageInfo, StdError, Uint128,
+    WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 
 #[test]
