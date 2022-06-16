@@ -162,7 +162,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         })?;
 
     let pair_contract = res.get_contract_address();
-    let liquidity_token = query_liquidity_token(deps.as_ref(), Addr::unchecked(pair_contract))?;
+    let pair_info = query_pair_info_from_pair(&deps.querier, Addr::unchecked(pair_contract))?;
 
     PAIRS.save(
         deps.storage,

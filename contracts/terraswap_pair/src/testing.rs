@@ -56,7 +56,7 @@ fn proper_initialization() {
                 })
                 .unwrap(),
                 funds: vec![],
-                label: "".to_string(),
+                label: "lp".to_string(),
                 admin: None,
             }
             .into(),

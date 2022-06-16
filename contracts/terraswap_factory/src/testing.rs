@@ -165,7 +165,7 @@ fn create_pair() {
                 code_id: 321u64,
                 funds: vec![],
                 label: "pair".to_string(),
-                admin: None,
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
         },]
@@ -230,7 +230,7 @@ fn create_pair_native_token_and_ibc_token() {
                 code_id: 321u64,
                 funds: vec![],
                 label: "pair".to_string(),
-                admin: None,
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
         },]

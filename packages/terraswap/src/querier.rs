@@ -99,7 +99,7 @@ pub fn reverse_simulate(
 }
 
 pub fn query_pair_info_from_pair(
-    querier: &QuerierWrapper<Empty>,
+    querier: &QuerierWrapper,
     pair_contract: Addr,
 ) -> StdResult<PairInfo> {
     let pair_info: PairInfo = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
