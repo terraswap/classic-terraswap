@@ -1,7 +1,7 @@
 [package]
 name = "terraswap-pair"
-version = "0.0.0"
-authors = ["Terraform Labs, PTE."]
+version = "0.1.0"
+authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition = "2018"
 description = "A Terraswap pair contract"
 license = "MIT"
@@ -44,7 +44,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.20" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = "2.2.0"
-terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.4.1"}
+terraswap = { path = "../../packages/terraswap", default-features = false, version = "2.5.1"}
 
 [dev-dependencies]
 cosmwasm-schema = "0.16.0"
