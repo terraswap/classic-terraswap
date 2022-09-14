@@ -1,3 +1,7 @@
+# 2.6.1
+
+* [a7b30f](https://github.com/terraswap/classic-terraswap/pull/4/commits/a7b30f1c5e8585cdc05240dd8aca5f37a0765d96) Fixed parse decimals
+
 # 2.6.0
 
 * [f575f8](https://github.com/terraswap/classic-terraswap/pull/2/commits/f575f8e816fa551b4328f2e0acbbe9b001a71945) Tax on LUNC
