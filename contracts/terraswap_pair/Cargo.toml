@@ -44,7 +44,7 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.20" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = "2.2.0"
-classic_terraswap = { path = "../../packages/classic_terraswap", default-features = false, version = "2.5.2"}
+classic_terraswap = { path = "../../packages/classic_terraswap", default-features = false, version = "2.6.0"}
 
 [dev-dependencies]
 cosmwasm-schema = "0.16.0"
