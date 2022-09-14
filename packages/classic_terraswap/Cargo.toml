@@ -1,7 +1,7 @@
 [package]
 name = "classic_terraswap"
 version = "2.6.0"
-authors = ["Terraform Labs, PTE.", "DELIGHTLABS"]
+authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition = "2018"
 description = "Common terraswap types"
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 cw20 = { version = "0.8.0" } 
 cosmwasm-storage = { version = "0.16.0" }
 terra-cosmwasm = { version = "2.2.0" }
-cosmwasm-std = { version = "0.16.0", features = ["stargate"] }
+cosmwasm-std = { version = "0.16.7" }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 protobuf = { version = "2", features = ["with-bytes"] }
