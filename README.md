@@ -17,11 +17,11 @@ Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contract
 
 * terraswap_pair
 
-   Mainnet (CodeID): 6027
+   Mainnet (CodeID): 6031
 
 * terraswap_token
 
-   Mainnet (CodeID): 6026
+   Mainnet (CodeID): 6030
 
 * terraswap_router
 
