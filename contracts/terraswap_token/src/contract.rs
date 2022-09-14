@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 
 use cw2::set_contract_version;
-use cw20_legacy::{
+use cw20_base::{
     contract::{create_accounts, execute as cw20_execute, query as cw20_query},
     msg::{ExecuteMsg, QueryMsg},
     state::{MinterData, TokenInfo, TOKEN_INFO},
@@ -13,7 +13,7 @@ use cw20_legacy::{
 use terraswap::token::InstantiateMsg;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw20-base";
+const CONTRACT_NAME: &str = "crates.io:terraswap-token";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -40,7 +40,7 @@ pub fn instantiate(
 
     let mint = match msg.mint {
         Some(m) => Some(MinterData {
-            minter: deps.api.addr_canonicalize(&m.minter)?,
+            minter: deps.api.addr_validate(&m.minter)?,
             cap: m.cap,
         }),
         None => None,
