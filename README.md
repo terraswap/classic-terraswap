@@ -13,27 +13,19 @@ Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contract
 
 * terraswap_factory
 
-   Mainnet: `terra1ulgw0td86nvs4wtpsc80thv6xelk76ut7a7apj`
-
-   Testnet: `terra18qpjm4zkvqnpjpw0zn0tdr8gdzvt8au35v45xf`
+   Mainnet: `terra1jkndu9w5attpz09ut02sgey5dd3e8sq5watzm0`
 
 * terraswap_pair
 
-   Mainnet (CodeID): 4
-
-   Testnet (CodeID): 155
+   Mainnet (CodeID): 6027
 
 * terraswap_token
 
-   Mainnet (CodeID): 3
-
-   Testnet (CodeID): 148
+   Mainnet (CodeID): 6026
 
 * terraswap_router
 
-   Mainnet: `terra19f36nz49pt0a4elfkd6x7gxxfmn3apj7emnenf`
-
-   Testnet: `terra1c58wrdkyc0ynvvxcv834kz65nfsxmw2w0pwusq`
+   Mainnet: `terra1g3zc8lwwmkrm0cz9wkgl849pdqaw6cq8lh7872`
 
 ## Running this contract
 
@@ -61,7 +53,7 @@ Or for a production-ready (compressed) build, run the following from the reposit
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/workspace-optimizer:0.12.4
+  cosmwasm/workspace-optimizer:0.12.6
 ```
 
 The optimized contracts are generated in the artifacts/ directory.

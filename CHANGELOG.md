@@ -1,6 +1,11 @@
+# 2.6.0
+
+* [f575f8](https://github.com/terraswap/classic-terraswap/pull/2/commits/f575f8e816fa551b4328f2e0acbbe9b001a71945) Tax on LUNC
+
 # 2.5.2
 
 * [319c39](https://github.com/terraswap/classic-terraswap/pull/3/commits/319c39b44889c2fc7a02add1ee99713a4a571124) rename classic_terraswap
+* [db9848](https://github.com/terraswap/classic-terraswap/pull/1/commits/db98485e7c2b14a13c13a3b8fc0d68d07fed9dd1) Follow up latest Terraswap
 
 # 2.5.1
 

@@ -1,6 +1,6 @@
 [package]
 name = "classic_terraswap"
-version = "2.5.2"
+version = "2.6.0"
 authors = ["Terraform Labs, PTE.", "DELIGHTLABS"]
 edition = "2018"
 description = "Common terraswap types"
