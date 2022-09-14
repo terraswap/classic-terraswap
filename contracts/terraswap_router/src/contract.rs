@@ -5,6 +5,7 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     QueryRequest, Response, StdError, StdResult, Uint128, WasmMsg, WasmQuery,
 };
+use cw2::set_contract_version;
 
 use crate::operations::execute_swap_operation;
 use crate::querier::{compute_reverse_tax, compute_tax};
@@ -21,6 +22,10 @@ use terraswap::router::{
     SimulateSwapOperationsResponse, SwapOperation,
 };
 
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:terraswap-router";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -28,6 +33,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     CONFIG.save(
         deps.storage,
         &Config {
@@ -618,6 +625,7 @@ fn test_invalid_operations() {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

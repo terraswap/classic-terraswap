@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_token_balance};
+use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
@@ -10,7 +10,7 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use terra_cosmwasm::TerraQuerier;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
     pub info: AssetInfo,
     pub amount: Uint128,
@@ -126,7 +126,7 @@ impl Asset {
 
 /// AssetInfo contract_addr is usually passed from the cw20 hook
 /// so we can trust the contract_addr is properly validated.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
     Token { contract_addr: String },
@@ -196,9 +196,21 @@ impl AssetInfo {
             }
         }
     }
+
+    pub fn query_decimals(&self, account_addr: Addr, querier: &QuerierWrapper) -> StdResult<u8> {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                query_native_decimals(querier, account_addr, denom.to_string())
+            }
+            AssetInfo::Token { contract_addr } => {
+                let token_info = query_token_info(querier, Addr::unchecked(contract_addr))?;
+                Ok(token_info.decimals)
+            }
+        }
+    }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct AssetRaw {
     pub info: AssetInfoRaw,
     pub amount: Uint128,
@@ -220,7 +232,7 @@ impl AssetRaw {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum AssetInfoRaw {
     Token { contract_addr: CanonicalAddr },
     NativeToken { denom: String },
@@ -268,18 +280,20 @@ impl AssetInfoRaw {
 }
 
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
     pub contract_addr: String,
     pub liquidity_token: String,
+    pub asset_decimals: [u8; 2],
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
+    pub asset_decimals: [u8; 2],
 }
 
 impl PairInfoRaw {
@@ -291,6 +305,7 @@ impl PairInfoRaw {
                 self.asset_infos[0].to_normal(api)?,
                 self.asset_infos[1].to_normal(api)?,
             ],
+            asset_decimals: self.asset_decimals,
         })
     }
 

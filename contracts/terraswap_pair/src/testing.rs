@@ -3,7 +3,7 @@ use crate::contract::{
     query_simulation, reply,
 };
 use crate::error::ContractError;
-use crate::mock_querier::mock_dependencies;
+use terraswap::mock_querier::mock_dependencies;
 
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
@@ -32,6 +32,7 @@ fn proper_initialization() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -55,7 +56,7 @@ fn proper_initialization() {
                 })
                 .unwrap(),
                 funds: vec![],
-                label: "".to_string(),
+                label: "lp".to_string(),
                 admin: None,
             }
             .into(),
@@ -122,6 +123,7 @@ fn provide_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -532,6 +534,7 @@ fn withdraw_liquidity() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -653,6 +656,7 @@ fn try_native_to_token() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();
@@ -833,6 +837,7 @@ fn try_token_to_native() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [8u8, 8u8],
     };
 
     let env = mock_env();
@@ -1018,41 +1023,175 @@ fn try_token_to_native() {
 
 #[test]
 fn test_max_spread() {
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "ask_asset_info".to_string(),
+    };
+
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200000000u128),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(990000u128),
+        },
         Uint128::zero(),
+        6u8,
+        6u8,
     )
     .unwrap();
 
     assert_max_spread(
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(989999u128),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(989999u128),
+        },
         Uint128::from(10001u128),
+        6u8,
+        6u8,
     )
     .unwrap_err();
 
     assert_max_spread(
         None,
         Some(Decimal::percent(1)),
-        Uint128::zero(),
-        Uint128::from(990000u128),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(990000u128),
+        },
         Uint128::from(10000u128),
+        6u8,
+        6u8,
     )
     .unwrap();
+}
+
+#[test]
+fn test_max_spread_with_diff_decimal() {
+    let token_addr = "ask_asset_info".to_string();
+
+    let mut deps = mock_dependencies(&[]);
+    deps.querier.with_token_balances(&[(
+        &token_addr,
+        &[(
+            &MOCK_CONTRACT_ADDR.to_string(),
+            &Uint128::from(10000000000u64),
+        )],
+    )]);
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+    let ask_asset_info = AssetInfo::Token {
+        contract_addr: token_addr.to_string(),
+    };
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(100000000u128),
+        },
+        Uint128::zero(),
+        6u8,
+        8u8,
+    )
+    .unwrap();
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(1200000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(98999999u128),
+        },
+        Uint128::zero(),
+        6u8,
+        8u8,
+    )
+    .unwrap_err();
+
+    let offer_asset_info = AssetInfo::Token {
+        contract_addr: token_addr,
+    };
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "offer_asset".to_string(),
+    };
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info.clone(),
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info.clone(),
+            amount: Uint128::from(1000000u128),
+        },
+        Uint128::zero(),
+        8u8,
+        6u8,
+    )
+    .unwrap();
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::percent(1)),
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::from(120000000000u128),
+        },
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::from(989999u128),
+        },
+        Uint128::zero(),
+        8u8,
+        6u8,
+    )
+    .unwrap_err();
 }
 
 #[test]
@@ -1115,6 +1254,7 @@ fn test_query_pool() {
             },
         ],
         token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
     };
 
     let env = mock_env();

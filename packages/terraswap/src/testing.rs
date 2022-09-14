@@ -1,11 +1,14 @@
-use crate::asset::{Asset, AssetInfo, PairInfo};
+use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo};
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
-    query_all_balances, query_balance, query_pair_info, query_supply, query_token_balance,
+    query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
 };
 
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg};
+use cosmwasm_std::{
+    coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Decimal, MessageInfo, StdError, Uint128,
+    WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 
 #[test]
@@ -89,7 +92,9 @@ fn supply_querier() {
     )]);
 
     assert_eq!(
-        query_supply(&deps.as_ref().querier, Addr::unchecked("liquidity0000")).unwrap(),
+        query_token_info(&deps.as_ref().querier, Addr::unchecked("liquidity0000"))
+            .unwrap()
+            .total_supply,
         Uint128::from(492u128)
     )
 }
@@ -239,24 +244,170 @@ fn test_asset() {
 }
 
 #[test]
+fn test_assert_sent_native_token_balance() {
+    // zero asset
+    let message_info = MessageInfo {
+        funds: vec![],
+        sender: Addr::unchecked("addr0000"),
+    };
+
+    let zero_asset = Asset {
+        amount: Uint128::zero(),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    assert_eq!(
+        zero_asset.assert_sent_native_token_balance(&message_info),
+        Ok(())
+    );
+
+    // invalid message_info
+    let message_info = MessageInfo {
+        funds: vec![coin(123, "uluna")],
+        sender: Addr::unchecked("addr0000"),
+    };
+
+    let invalid_amount_asset = Asset {
+        amount: Uint128::from(1u8),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    assert_eq!(
+        invalid_amount_asset.assert_sent_native_token_balance(&message_info),
+        Err(StdError::generic_err(
+            "Native token balance mismatch between the argument and the transferred"
+        ))
+    );
+
+    let invalid_amount_asset = Asset {
+        amount: Uint128::from(1u8),
+        info: AssetInfo::NativeToken {
+            denom: "ulunc".to_string(),
+        },
+    };
+
+    assert_eq!(
+        invalid_amount_asset.assert_sent_native_token_balance(&message_info),
+        Err(StdError::generic_err(
+            "Native token balance mismatch between the argument and the transferred"
+        ))
+    )
+}
+
+#[test]
+fn test_asset_to_raw() {
+    let deps = mock_dependencies(&[]);
+    let native_asset = Asset {
+        amount: Uint128::from(1u128),
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    };
+
+    let native_asset_to_raw = native_asset.to_raw(&deps.api).unwrap();
+
+    assert_eq!(
+        native_asset_to_raw,
+        AssetRaw {
+            amount: Uint128::from(1u128),
+            info: AssetInfoRaw::NativeToken {
+                denom: "uluna".to_string()
+            }
+        }
+    );
+
+    assert_eq!(
+        native_asset_to_raw.to_normal(&deps.api).unwrap(),
+        native_asset
+    );
+
+    let token_asset = Asset {
+        amount: Uint128::from(1u128),
+        info: AssetInfo::Token {
+            contract_addr: "contract0000".to_string(),
+        },
+    };
+
+    let token_asset_to_raw = token_asset.to_raw(&deps.api).unwrap();
+
+    assert_eq!(
+        token_asset_to_raw,
+        AssetRaw {
+            amount: Uint128::from(1u128),
+            info: AssetInfoRaw::Token {
+                contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+            }
+        }
+    );
+
+    assert_eq!(
+        token_asset_to_raw.to_normal(&deps.api).unwrap(),
+        token_asset
+    )
+}
+
+#[test]
+fn test_asset_info_raw_equal() {
+    let native_asset_info_raw = AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string(),
+    };
+
+    assert!(native_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string()
+    }));
+
+    assert!(!native_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "ulunc".to_string()
+    }));
+
+    let deps = mock_dependencies(&[]);
+    assert!(!native_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+    }));
+
+    let token_asset_info_raw = AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap(),
+    };
+    assert!(token_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
+    }));
+
+    assert!(!token_asset_info_raw.equal(&AssetInfoRaw::Token {
+        contract_addr: deps.api.addr_canonicalize("contract000").unwrap()
+    }));
+
+    assert!(!token_asset_info_raw.equal(&AssetInfoRaw::NativeToken {
+        denom: "uluna".to_string()
+    }));
+}
+
+#[test]
 fn query_terraswap_pair_contract() {
     let mut deps = mock_dependencies(&[]);
 
-    deps.querier.with_terraswap_pairs(&[(
-        &"asset0000uusd".to_string(),
-        &PairInfo {
-            asset_infos: [
-                AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            ],
-            contract_addr: "pair0000".to_string(),
-            liquidity_token: "liquidity0000".to_string(),
-        },
-    )]);
+    deps.querier.with_terraswap_factory(
+        &[(
+            &"asset0000uusd".to_string(),
+            &PairInfo {
+                asset_infos: [
+                    AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                ],
+                contract_addr: "pair0000".to_string(),
+                liquidity_token: "liquidity0000".to_string(),
+                asset_decimals: [6u8, 6u8],
+            },
+        )],
+        &[("uusd".to_string(), 6u8)],
+    );
 
     let pair_info: PairInfo = query_pair_info(
         &deps.as_ref().querier,
