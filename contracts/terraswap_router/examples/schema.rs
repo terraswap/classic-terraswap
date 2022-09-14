@@ -1,8 +1,10 @@
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
+use classic_terraswap::router::{
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
+};
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-use terraswap::router::{ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

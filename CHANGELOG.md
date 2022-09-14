@@ -1,3 +1,7 @@
+# 2.5.2
+
+* [319c39](https://github.com/terraswap/classic-terraswap/pull/3/commits/319c39b44889c2fc7a02add1ee99713a4a571124) rename classic_terraswap
+
 # 2.5.1
 
 * [2bfb0bb](https://github.com/terraswap/terraswap/pull/20/commits/82954c0aa289f12a3fe66df30cf1a65ce7bd4a4e) LOOP and ASTROPORT support on router

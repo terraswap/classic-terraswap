@@ -5,7 +5,7 @@ authors = ["Terraform Labs, PTE."]
 edition = "2018"
 description = "Backward compatible implementation of a CosmWasm-20 compliant token"
 license = "MIT"
-repository = "https://github.com/terraswap/terraswap"
+repository = "https://github.com/terraswap/classic_terraswap"
 homepage = "https://cosmwasm.com"
 documentation = "https://docs.cosmwasm.com"
 
@@ -27,7 +27,7 @@ cosmwasm-std = { version = "0.16.0" }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.20" }
-terraswap = { path = "../../packages/terraswap", version = "2.4.1" }
+classic_terraswap = { path = "../../packages/classic_terraswap", version = "2.5.2" }
 
 [dev-dependencies]
 # we only need to enable this if we use integration tests
