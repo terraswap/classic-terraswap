@@ -1,3 +1,4 @@
+use classic_terraswap::querier::{query_balance, query_pair_info_from_pair};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,7 +6,6 @@ use cosmwasm_std::{
     StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
-use terraswap::querier::{query_balance, query_pair_info_from_pair};
 
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
@@ -13,13 +13,13 @@ use crate::state::{
     PAIRS, TMP_PAIR_INFO,
 };
 
-use protobuf::Message;
-use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
-use terraswap::factory::{
+use classic_terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
+use classic_terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
     PairsResponse, QueryMsg,
 };
-use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg};
+use classic_terraswap::pair::{InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg};
+use protobuf::Message;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-factory";

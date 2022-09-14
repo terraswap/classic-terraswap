@@ -8,12 +8,12 @@ use cosmwasm_std::{
 use crate::querier::compute_tax;
 use crate::state::{Config, CONFIG};
 
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
+use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;
+use classic_terraswap::querier::{query_balance, query_pair_info, query_token_balance};
+use classic_terraswap::router::SwapOperation;
 use cw20::Cw20ExecuteMsg;
 use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::ExecuteMsg as PairExecuteMsg;
-use terraswap::querier::{query_balance, query_pair_info, query_token_balance};
-use terraswap::router::SwapOperation;
 
 /// Execute swap operation
 /// swap all offer asset to ask asset

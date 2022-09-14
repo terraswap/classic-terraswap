@@ -3,20 +3,20 @@ use crate::contract::{
     query_simulation, reply,
 };
 use crate::error::ContractError;
-use terraswap::mock_querier::mock_dependencies;
+use classic_terraswap::mock_querier::mock_dependencies;
 
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
+use classic_terraswap::pair::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolResponse, ReverseSimulationResponse,
+    SimulationResponse,
+};
+use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, to_binary, BankMsg, Coin, ContractResult, CosmosMsg, Decimal, Reply, ReplyOn, Response,
     StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolResponse, ReverseSimulationResponse,
-    SimulationResponse,
-};
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
 #[test]
 fn proper_initialization() {

@@ -11,16 +11,16 @@ use crate::operations::execute_swap_operation;
 use crate::querier::{compute_reverse_tax, compute_tax};
 use crate::state::{Config, CONFIG};
 
-use cw20::Cw20ReceiveMsg;
-use std::collections::HashMap;
-use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
-use terraswap::querier::{query_pair_info, reverse_simulate};
-use terraswap::router::{
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
+use classic_terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
+use classic_terraswap::querier::{query_pair_info, reverse_simulate};
+use classic_terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use cw20::Cw20ReceiveMsg;
+use std::collections::HashMap;
+use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-router";

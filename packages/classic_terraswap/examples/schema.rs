@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

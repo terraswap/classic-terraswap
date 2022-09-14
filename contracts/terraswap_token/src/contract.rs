@@ -10,7 +10,7 @@ use cw20_base::{
     ContractError,
 };
 
-use terraswap::token::InstantiateMsg;
+use classic_terraswap::token::InstantiateMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-token";

@@ -1,18 +1,18 @@
 use crate::contract::{execute, instantiate, query, reply};
-use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
+use classic_terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 
 use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
+use classic_terraswap::asset::{AssetInfo, PairInfo};
+use classic_terraswap::factory::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
+};
+use classic_terraswap::pair::{InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg};
 use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, coin, from_binary, to_binary, ContractResult, CosmosMsg, OwnedDeps, Reply, ReplyOn,
     Response, StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
 };
-use terraswap::asset::{AssetInfo, PairInfo};
-use terraswap::factory::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
-};
-use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg};
 
 #[test]
 fn proper_initialization() {

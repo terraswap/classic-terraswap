@@ -4,16 +4,16 @@ use cosmwasm_std::{
 };
 
 use crate::contract::{execute, instantiate, query};
-use terraswap::mock_querier::mock_dependencies;
+use classic_terraswap::mock_querier::mock_dependencies;
 
-use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::ExecuteMsg as PairExecuteMsg;
-use terraswap::router::{
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
+use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;
+use classic_terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
 
 #[test]
 fn proper_initialization() {

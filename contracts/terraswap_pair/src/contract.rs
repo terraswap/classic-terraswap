@@ -10,6 +10,13 @@ use cosmwasm_std::{
     Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 
+use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
+use classic_terraswap::pair::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg,
+    ReverseSimulationResponse, SimulationResponse,
+};
+use classic_terraswap::querier::query_token_info;
+use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
@@ -17,13 +24,6 @@ use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
 use std::cmp::Ordering;
 use std::str::FromStr;
-use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
-use terraswap::pair::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg,
-    ReverseSimulationResponse, SimulationResponse,
-};
-use terraswap::querier::query_token_info;
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
