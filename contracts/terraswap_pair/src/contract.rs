@@ -6,8 +6,9 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
+    Decimal256 as CwDecimal256, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
+    StdError, StdResult, SubMsg, Uint128, Uint256 as CwUint256, WasmMsg,
 };
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
@@ -20,9 +21,10 @@ use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
-use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
 use std::cmp::Ordering;
+use std::convert::TryInto;
+use std::ops::Mul;
 use std::str::FromStr;
 
 // version info for migration info
@@ -262,9 +264,16 @@ pub fn provide_liquidity(
 
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
-    let share = if total_share == Uint128::zero() {
+    let share = if total_share.is_zero() {
         // Initial share = collateral amount
-        Uint128::from((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
+        let deposit0: CwUint256 = deposits[0].into();
+        let deposit1: CwUint256 = deposits[1].into();
+        match (CwDecimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt() * CwUint256::from(1u8))
+            .try_into()
+        {
+            Ok(share) => share,
+            Err(e) => return Err(ContractError::ConversionOverflowError(e)),
+        }
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
@@ -742,8 +751,24 @@ fn assert_slippage_tolerance(
     Ok(())
 }
 
+const TARGET_CONTRACT_VERSION: &str = "0.1.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let prev_version = cw2::get_contract_version(deps.as_ref().storage)?;
+
+    if prev_version.contract != CONTRACT_NAME {
+        return Err(ContractError::Std(StdError::generic_err(
+            "invalid contract",
+        )));
+    }
+
+    if prev_version.version != TARGET_CONTRACT_VERSION {
+        return Err(ContractError::Std(StdError::generic_err(format!(
+            "invalid contract version. target {}, but source is {}",
+            TARGET_CONTRACT_VERSION, prev_version.version
+        ))));
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())
