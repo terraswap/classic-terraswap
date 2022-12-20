@@ -587,7 +587,10 @@ fn compute_swap(
     // calculate spread & commission
     let spread_amount: Uint256 =
         (offer_amount * Decimal256::from_ratio(ask_pool, offer_pool)) - return_amount;
-    let commission_amount: Uint256 = return_amount * commission_rate;
+    let mut commission_amount: Uint256 = return_amount * commission_rate;
+    if return_amount != (commission_amount * (Decimal256::one() / commission_rate)) {
+        commission_amount += Uint256::from(1u128);
+    }
 
     // commission will be absorbed to pool
     let return_amount: Uint256 = return_amount - commission_amount;
@@ -626,12 +629,20 @@ fn compute_offer_amount(
 
     let one_minus_commission = Decimal256::one() - commission_rate;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
+    let mut before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
+    if before_commission_deduction * one_minus_commission != ask_amount {
+        before_commission_deduction += Uint256::one();
+    }
 
-    let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
-        - offer_pool;
+    let after_ask_pool = ask_pool - before_commission_deduction;
+    let mut after_offer_pool = Uint256::one().multiply_ratio(cp, after_ask_pool);
 
-    let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
+    if after_offer_pool * (ask_pool - before_commission_deduction) != cp {
+        after_offer_pool += Uint256::one();
+    }
+
+    let offer_amount: Uint256 = after_offer_pool - offer_pool;
+
     let before_spread_deduction: Uint256 =
         offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
 
@@ -641,7 +652,7 @@ fn compute_offer_amount(
         Uint256::zero()
     };
 
-    let commission_amount = before_commission_deduction * commission_rate;
+    let commission_amount = before_commission_deduction - ask_amount;
 
     (
         offer_amount.into(),
