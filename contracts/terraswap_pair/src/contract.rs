@@ -6,7 +6,7 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal,
     Decimal256 as CwDecimal256, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, Uint128, Uint256 as CwUint256, WasmMsg,
 };
@@ -25,7 +25,6 @@ use protobuf::Message;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::ops::Mul;
-use std::str::FromStr;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
@@ -34,7 +33,8 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE: &str = "0.003";
+const COMMISSION_RATE: u64 = 3;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -612,13 +612,6 @@ pub fn query_reverse_simulation(
     })
 }
 
-pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
-    match coins.iter().find(|x| x.denom == denom) {
-        Some(coin) => coin.amount,
-        None => Uint128::zero(),
-    }
-}
-
 fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
@@ -628,7 +621,7 @@ fn compute_swap(
     let ask_pool: Uint256 = ask_pool.into();
     let offer_amount: Uint256 = offer_amount.into();
 
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
@@ -672,7 +665,7 @@ fn compute_offer_amount(
     let ask_pool: Uint256 = ask_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
 
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
