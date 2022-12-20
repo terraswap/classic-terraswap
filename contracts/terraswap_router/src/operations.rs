@@ -23,6 +23,7 @@ pub fn execute_swap_operation(
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
+    deadline: Option<u64>,
 ) -> StdResult<Response<TerraMsgWrapper>> {
     if env.contract.address != info.sender {
         return Err(StdError::generic_err("unauthorized"));
@@ -91,6 +92,7 @@ pub fn execute_swap_operation(
                 offer_asset,
                 None,
                 to,
+                deadline,
             )?]
         }
         SwapOperation::Loop {
@@ -126,6 +128,7 @@ pub fn execute_swap_operation(
                 offer_asset,
                 None,
                 to,
+                deadline,
             )?]
         }
         SwapOperation::Astroport {
@@ -161,6 +164,7 @@ pub fn execute_swap_operation(
                 offer_asset,
                 Some(Decimal::from_str("0.5")?),
                 to,
+                deadline,
             )?]
         }
     };
@@ -174,6 +178,7 @@ pub fn asset_into_swap_msg(
     offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
+    deadline: Option<u64>,
 ) -> StdResult<CosmosMsg<TerraMsgWrapper>> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => {
@@ -195,6 +200,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline,
                 })?,
             }))
         }
@@ -209,6 +215,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline,
                 })?,
             })?,
         })),
