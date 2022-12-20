@@ -93,7 +93,7 @@ pub fn execute(
             prev_balance,
             minimum_receive,
             receiver,
-        } => assert_minium_receive(
+        } => assert_minimum_receive(
             deps.as_ref(),
             asset_info,
             prev_balance,
@@ -201,7 +201,7 @@ pub fn execute_swap_operations(
     Ok(Response::new().add_messages(messages))
 }
 
-fn assert_minium_receive(
+fn assert_minimum_receive(
     deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,
