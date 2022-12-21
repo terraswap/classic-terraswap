@@ -18,6 +18,7 @@ use classic_terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use classic_terraswap::util::assert_deadline;
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
 use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
@@ -60,6 +61,7 @@ pub fn execute(
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -69,9 +71,14 @@ pub fn execute(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
-        ExecuteMsg::ExecuteSwapOperation { operation, to } => {
+        ExecuteMsg::ExecuteSwapOperation {
+            operation,
+            to,
+            deadline,
+        } => {
             let api = deps.api;
             execute_swap_operation(
                 deps,
@@ -79,6 +86,7 @@ pub fn execute(
                 info,
                 operation,
                 optional_addr_validate(api, to)?.map(|v| v.to_string()),
+                deadline,
             )
         }
         ExecuteMsg::AssertMinimumReceive {
@@ -118,6 +126,7 @@ pub fn receive_cw20(
             operations,
             minimum_receive,
             to,
+            deadline,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -127,6 +136,7 @@ pub fn receive_cw20(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                deadline,
             )
         }
     }
@@ -139,7 +149,10 @@ pub fn execute_swap_operations(
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
+    deadline: Option<u64>,
 ) -> StdResult<Response<TerraMsgWrapper>> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(StdError::generic_err("must provide operations"));
@@ -166,6 +179,7 @@ pub fn execute_swap_operations(
                     } else {
                         None
                     },
+                    deadline: None,
                 })?,
             }))
         })

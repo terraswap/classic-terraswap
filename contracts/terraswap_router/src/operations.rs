@@ -12,6 +12,7 @@ use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use classic_terraswap::querier::{query_balance, query_pair_info, query_token_balance};
 use classic_terraswap::router::SwapOperation;
+use classic_terraswap::util::assert_deadline;
 use cw20::Cw20ExecuteMsg;
 use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
 
@@ -23,10 +24,13 @@ pub fn execute_swap_operation(
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
+    deadline: Option<u64>,
 ) -> StdResult<Response<TerraMsgWrapper>> {
     if env.contract.address != info.sender {
         return Err(StdError::generic_err("unauthorized"));
     }
+
+    assert_deadline(env.block.time.seconds(), deadline)?;
 
     let messages: Vec<CosmosMsg<TerraMsgWrapper>> = match operation {
         SwapOperation::NativeSwap {
@@ -195,6 +199,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline: None,
                 })?,
             }))
         }
@@ -209,6 +214,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline: None,
                 })?,
             })?,
         })),

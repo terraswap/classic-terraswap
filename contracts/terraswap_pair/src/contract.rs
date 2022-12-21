@@ -18,6 +18,7 @@ use classic_terraswap::pair::{
 };
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use classic_terraswap::util::assert_deadline;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
@@ -90,14 +91,17 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::ProvideLiquidity { assets, receiver } => {
-            provide_liquidity(deps, env, info, assets, receiver)
-        }
+        ExecuteMsg::ProvideLiquidity {
+            assets,
+            receiver,
+            deadline,
+        } => provide_liquidity(deps, env, info, assets, receiver, deadline),
         ExecuteMsg::Swap {
             offer_asset,
             belief_price,
             max_spread,
             to,
+            deadline,
         } => {
             if !offer_asset.is_native_token() {
                 return Err(ContractError::Unauthorized {});
@@ -118,6 +122,7 @@ pub fn execute(
                 belief_price,
                 max_spread,
                 to_addr,
+                deadline,
             )
         }
     }
@@ -136,6 +141,7 @@ pub fn receive_cw20(
             belief_price,
             max_spread,
             to,
+            deadline,
         }) => {
             // only asset contract can execute this message
             let mut authorized: bool = false;
@@ -174,16 +180,28 @@ pub fn receive_cw20(
                 belief_price,
                 max_spread,
                 to_addr,
+                deadline,
             )
         }
-        Ok(Cw20HookMsg::WithdrawLiquidity { min_assets }) => {
+        Ok(Cw20HookMsg::WithdrawLiquidity {
+            min_assets,
+            deadline,
+        }) => {
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
             if deps.api.addr_canonicalize(info.sender.as_str())? != config.liquidity_token {
                 return Err(ContractError::Unauthorized {});
             }
 
             let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            withdraw_liquidity(deps, env, info, sender_addr, cw20_msg.amount, min_assets)
+            withdraw_liquidity(
+                deps,
+                env,
+                info,
+                sender_addr,
+                cw20_msg.amount,
+                min_assets,
+                deadline,
+            )
         }
         Err(err) => Err(ContractError::Std(err)),
     }
@@ -215,7 +233,10 @@ pub fn provide_liquidity(
     info: MessageInfo,
     assets: [Asset; 2],
     receiver: Option<String>,
+    deadline: Option<u64>,
 ) -> Result<Response, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
     }
@@ -345,7 +366,10 @@ pub fn withdraw_liquidity(
     sender: Addr,
     amount: Uint128,
     min_assets: Option<[Asset; 2]>,
+    deadline: Option<u64>,
 ) -> Result<Response, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
 
@@ -404,7 +428,10 @@ pub fn swap(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
+    deadline: Option<u64>,
 ) -> Result<Response, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     offer_asset.assert_sent_native_token_balance(&info)?;
 
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;

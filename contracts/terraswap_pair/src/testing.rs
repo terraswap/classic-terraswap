@@ -164,6 +164,7 @@ fn provide_liquidity() {
             },
         ],
         receiver: None,
+        deadline: None,
     };
 
     let env = mock_env();
@@ -242,6 +243,7 @@ fn provide_liquidity() {
             },
         ],
         receiver: Some("staking0000".to_string()), // try changing receiver
+        deadline: None,
     };
 
     let env = mock_env();
@@ -309,6 +311,7 @@ fn provide_liquidity() {
             },
         ],
         receiver: None,
+        deadline: None,
     };
 
     let env = mock_env();
@@ -365,6 +368,7 @@ fn provide_liquidity() {
             },
         ],
         receiver: None,
+        deadline: None,
     };
 
     let env = mock_env();
@@ -464,7 +468,11 @@ fn withdraw_liquidity() {
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity { min_assets: None }).unwrap(),
+        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+            min_assets: None,
+            deadline: None,
+        })
+        .unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -537,6 +545,7 @@ fn withdraw_liquidity() {
                     amount: Uint128::zero(),
                 },
             ]),
+            deadline: None,
         })
         .unwrap(),
         amount: Uint128::from(100u128),
@@ -552,6 +561,25 @@ fn withdraw_liquidity() {
             min_asset: "1000uusd".to_string(),
             asset: "100uusd".to_string()
         }
+    );
+
+    // failed to withdraw liquidity due to deadline
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+            min_assets: None,
+            deadline: Some(100u64),
+        })
+        .unwrap(),
+        amount: Uint128::from(100u128),
+    });
+
+    let env = mock_env();
+    let info = mock_info("liquidity0000", &[]);
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+    assert_eq!(
+        err,
+        ContractError::Std(StdError::generic_err("Expired deadline"))
     )
 }
 
@@ -629,6 +657,7 @@ fn try_native_to_token() {
         belief_price: None,
         max_spread: None,
         to: None,
+        deadline: None,
     };
     let env = mock_env();
     let info = mock_info(
@@ -811,6 +840,7 @@ fn try_token_to_native() {
         belief_price: None,
         max_spread: None,
         to: None,
+        deadline: None,
     };
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -828,6 +858,7 @@ fn try_token_to_native() {
             belief_price: None,
             max_spread: None,
             to: None,
+            deadline: None,
         })
         .unwrap(),
     });
@@ -949,6 +980,7 @@ fn try_token_to_native() {
             belief_price: None,
             max_spread: None,
             to: None,
+            deadline: None,
         })
         .unwrap(),
     });
