@@ -18,6 +18,7 @@ use classic_terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+use classic_terraswap::util::assert_deadline;
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
 use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
@@ -150,6 +151,8 @@ pub fn execute_swap_operations(
     to: Option<Addr>,
     deadline: Option<u64>,
 ) -> StdResult<Response<TerraMsgWrapper>> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(StdError::generic_err("must provide operations"));
@@ -176,7 +179,7 @@ pub fn execute_swap_operations(
                     } else {
                         None
                     },
-                    deadline,
+                    deadline: None,
                 })?,
             }))
         })

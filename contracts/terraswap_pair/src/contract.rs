@@ -18,6 +18,7 @@ use classic_terraswap::pair::{
 };
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use classic_terraswap::util::assert_deadline;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
@@ -816,16 +817,6 @@ pub fn assert_minimum_assets(
 
             Ok(())
         })?;
-    }
-
-    Ok(())
-}
-
-pub fn assert_deadline(blocktime: u64, deadline: Option<u64>) -> Result<(), ContractError> {
-    if let Some(deadline) = deadline {
-        if blocktime >= deadline {
-            return Err(ContractError::ExpiredDeadline {});
-        }
     }
 
     Ok(())

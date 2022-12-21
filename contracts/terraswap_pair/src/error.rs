@@ -32,7 +32,4 @@ pub enum ContractError {
 
     #[error("Min amount assertion ({min_asset} > {asset})")]
     MinAmountAssertion { min_asset: String, asset: String },
-
-    #[error("Expired deadline")]
-    ExpiredDeadline {},
 }
