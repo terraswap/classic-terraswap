@@ -26,7 +26,7 @@ Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contract
 
 You will need Rust 1.44.1+ with wasm32-unknown-unknown target installed.
 
-You can run unit tests on this on each contracts directory via :
+You can run unit tests on this on each contracts' directory via :
 
 ```
 cargo unit-test
