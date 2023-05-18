@@ -64,6 +64,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "cw2",
  "cw20",
  "protobuf",
  "schemars",
