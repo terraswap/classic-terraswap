@@ -1,19 +1,18 @@
-use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, ContractResult, Decimal, OwnedDeps, Querier,
     QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use std::collections::HashMap;
 use std::panic;
+use std::marker::PhantomData;
 
 use crate::asset::{AssetInfo, PairInfo};
 use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::QueryMsg as PairQueryMsg;
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use terra_cosmwasm::{
-    SwapResponse, TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute,
-};
+use classic_bindings::{TerraQuery, TaxCapResponse, SwapResponse, TaxRateResponse};
 
 use std::iter::FromIterator;
 
@@ -21,7 +20,7 @@ use std::iter::FromIterator;
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQuery> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
@@ -29,11 +28,12 @@ pub fn mock_dependencies(
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: custom_querier,
+        custom_query_type: PhantomData,
     }
 }
 
 pub struct WasmMockQuerier {
-    base: MockQuerier<TerraQueryWrapper>,
+    base: MockQuerier<TerraQuery>,
     token_querier: TokenQuerier,
     tax_querier: TaxQuerier,
     terraswap_factory_querier: TerraswapFactoryQuerier,
@@ -131,7 +131,7 @@ pub(crate) fn native_token_decimals_to_map(
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<TerraQueryWrapper> = match from_slice(bin_request) {
+        let request: QueryRequest<TerraQuery> = match from_slice(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -145,17 +145,17 @@ impl Querier for WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn handle_query(&self, request: &QueryRequest<TerraQueryWrapper>) -> QuerierResult {
+    pub fn handle_query(&self, request: &QueryRequest<TerraQuery>) -> QuerierResult {
         match &request {
-            QueryRequest::Custom(TerraQueryWrapper { route, query_data }) => {
-                match (route, query_data) {
-                    (&TerraRoute::Treasury, TerraQuery::TaxRate {}) => {
+            QueryRequest::Custom(query_data) => {
+                match query_data {
+                    TerraQuery::TaxRate {} => {
                         let res = TaxRateResponse {
                             rate: self.tax_querier.rate,
                         };
                         SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
                     }
-                    (&TerraRoute::Treasury, TerraQuery::TaxCap { denom }) => {
+                    TerraQuery::TaxCap { denom } => {
                         let cap = self
                             .tax_querier
                             .caps
@@ -165,19 +165,13 @@ impl WasmMockQuerier {
                         let res = TaxCapResponse { cap };
                         SystemResult::Ok(ContractResult::Ok(to_binary(&res).unwrap()))
                     }
-                    (
-                        &TerraRoute::Market,
-                        TerraQuery::Swap {
-                            offer_coin,
-                            ask_denom: _,
-                        },
-                    ) => {
+                    TerraQuery::Swap {offer_coin,ask_denom: _,} => {
                         let res = SwapResponse {
                             receive: offer_coin.clone(),
                         };
                         SystemResult::Ok(ContractResult::from(to_binary(&res)))
                     }
-                    (_, _) => panic!("DO NOT ENTER HERE"),
+                    _ => panic!("DO NOT ENTER HERE"),
                 }
             }
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
@@ -319,7 +313,7 @@ impl WasmMockQuerier {
 }
 
 impl WasmMockQuerier {
-    pub fn new(base: MockQuerier<TerraQueryWrapper>) -> Self {
+    pub fn new(base: MockQuerier<TerraQuery>) -> Self {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),

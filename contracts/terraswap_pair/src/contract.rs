@@ -7,7 +7,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, Decimal256, Uint256,
 };
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
@@ -17,7 +17,7 @@ use classic_terraswap::pair::{
 };
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use cosmwasm_bignumber::{Decimal256, Uint256};
+//use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;

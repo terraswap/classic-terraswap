@@ -1,5 +1,5 @@
-use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Decimal, QuerierWrapper, StdResult, Uint128};
+//use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_std::{Decimal, QuerierWrapper, StdResult, Uint128, Uint256, Decimal256};
 use std::ops::Mul;
 use terra_cosmwasm::TerraQuerier;
 
