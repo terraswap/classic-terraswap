@@ -6,9 +6,8 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal,
-    Decimal256 as CwDecimal256, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
-    StdError, StdResult, SubMsg, Uint128, Uint256 as CwUint256, WasmMsg,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, Decimal256, Uint256,
 };
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
@@ -19,7 +18,6 @@ use classic_terraswap::pair::{
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use classic_terraswap::util::{assert_deadline, migrate_version};
-use cosmwasm_bignumber::{Decimal256, Uint256};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use protobuf::Message;
