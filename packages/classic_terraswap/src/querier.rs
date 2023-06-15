@@ -23,7 +23,10 @@ pub fn query_balance(
     Ok(balance.amount.amount)
 }
 
-pub fn query_all_balances(querier: &QuerierWrapper<TerraQuery>, account_addr: Addr) -> StdResult<Vec<Coin>> {
+pub fn query_all_balances(
+    querier: &QuerierWrapper<TerraQuery>,
+    account_addr: Addr,
+) -> StdResult<Vec<Coin>> {
     // load price form the oracle
     let all_balances: AllBalanceResponse =
         querier.query(&QueryRequest::Bank(BankQuery::AllBalances {

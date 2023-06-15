@@ -6,11 +6,12 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg, Decimal256, Uint256,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Decimal256, Deps,
+    DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
+    Uint256, WasmMsg,
 };
 
-use classic_bindings::{TerraQuery, TerraMsg};
+use classic_bindings::{TerraMsg, TerraQuery};
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use classic_terraswap::pair::{
@@ -706,7 +707,9 @@ fn test_compute_swap_with_huge_pool_variance() {
     let ask_pool = Uint128::from(317u128);
 
     assert_eq!(
-        compute_swap(offer_pool, ask_pool, Uint128::from(1u128)).unwrap().0,
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128))
+            .unwrap()
+            .0,
         Uint128::zero()
     );
 }
@@ -869,7 +872,11 @@ pub fn assert_minimum_assets(
 
 const TARGET_CONTRACT_VERSION: &str = "0.1.1";
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> Result<Response<TerraMsg>, ContractError> {
     migrate_version(
         deps,
         TARGET_CONTRACT_VERSION,

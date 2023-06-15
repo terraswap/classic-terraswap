@@ -15,8 +15,8 @@ use classic_terraswap::pair::{
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, coins, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response,
-    StdError, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coins, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 

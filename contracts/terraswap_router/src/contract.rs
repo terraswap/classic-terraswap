@@ -11,7 +11,7 @@ use crate::operations::execute_swap_operation;
 use crate::querier::{compute_reverse_tax, compute_tax};
 use crate::state::{Config, CONFIG};
 
-use classic_bindings::{TerraQuery, TerraMsg, TerraQuerier, SwapResponse};
+use classic_bindings::{SwapResponse, TerraMsg, TerraQuerier, TerraQuery};
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};

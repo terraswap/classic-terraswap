@@ -6,6 +6,7 @@ use cosmwasm_std::{
 use crate::contract::{execute, instantiate, query};
 use classic_terraswap::mock_querier::mock_dependencies;
 
+use classic_bindings::TerraMsg;
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use classic_terraswap::router::{
@@ -13,7 +14,6 @@ use classic_terraswap::router::{
     SimulateSwapOperationsResponse, SwapOperation,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use classic_bindings::TerraMsg;
 
 #[test]
 fn proper_initialization() {

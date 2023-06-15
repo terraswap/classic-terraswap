@@ -8,7 +8,7 @@ use cosmwasm_std::{
 use crate::querier::compute_tax;
 use crate::state::{Config, CONFIG};
 
-use classic_bindings::{TerraQuery, TerraMsg};
+use classic_bindings::{TerraMsg, TerraQuery};
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;

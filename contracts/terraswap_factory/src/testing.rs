@@ -15,8 +15,8 @@ use classic_terraswap::pair::{
 };
 use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, SubMsgResult, SubMsgResponse, CosmosMsg, OwnedDeps, Reply, ReplyOn,
-    Response, StdError, SubMsg, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, CosmosMsg, OwnedDeps, Reply, ReplyOn, Response, StdError,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 

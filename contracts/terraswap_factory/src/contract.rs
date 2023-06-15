@@ -14,7 +14,7 @@ use crate::state::{
     PAIRS, TMP_PAIR_INFO,
 };
 
-use classic_bindings::{TerraQuery, TerraMsg};
+use classic_bindings::{TerraMsg, TerraQuery};
 
 use classic_terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
 use classic_terraswap::factory::{
@@ -55,7 +55,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut<TerraQuery>, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response<TerraMsg>> {
+pub fn execute(
+    deps: DepsMut<TerraQuery>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response<TerraMsg>> {
     match msg {
         ExecuteMsg::UpdateConfig {
             owner,
@@ -392,7 +397,11 @@ pub fn query_native_token_decimal(
 
 const TARGET_CONTRACT_VERSION: &str = "0.0.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> StdResult<Response<TerraMsg>> {
     migrate_version(
         deps,
         TARGET_CONTRACT_VERSION,
