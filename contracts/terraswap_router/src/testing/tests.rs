@@ -13,7 +13,7 @@ use classic_terraswap::router::{
     SimulateSwapOperationsResponse, SwapOperation,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg};
+use classic_bindings::TerraMsg;
 
 #[test]
 fn proper_initialization() {
@@ -359,7 +359,7 @@ fn execute_swap_operation() {
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(
         res.messages,
-        vec![SubMsg::new(create_swap_msg(
+        vec![SubMsg::new(TerraMsg::create_swap_msg(
             Coin {
                 denom: "uusd".to_string(),
                 amount: Uint128::from(1000000u128),
@@ -381,7 +381,7 @@ fn execute_swap_operation() {
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(
         res.messages,
-        vec![SubMsg::new(create_swap_send_msg(
+        vec![SubMsg::new(TerraMsg::create_swap_send_msg(
             "addr0000".to_string(),
             Coin {
                 denom: "uusd".to_string(),

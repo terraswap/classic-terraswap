@@ -11,6 +11,8 @@ use crate::operations::execute_swap_operation;
 use crate::querier::{compute_reverse_tax, compute_tax};
 use crate::state::{Config, CONFIG};
 
+use classic_bindings::{TerraQuery, TerraMsg, TerraQuerier, SwapResponse};
+
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::{QueryMsg as PairQueryMsg, SimulationResponse};
 use classic_terraswap::querier::{query_pair_info, reverse_simulate};
@@ -20,7 +22,6 @@ use classic_terraswap::router::{
 };
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
-use terra_cosmwasm::{SwapResponse, TerraMsgWrapper, TerraQuerier};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-router";
@@ -28,11 +29,11 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     CONFIG.save(
@@ -49,11 +50,11 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> StdResult<Response<TerraMsgWrapper>> {
+) -> StdResult<Response<TerraMsg>> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ExecuteSwapOperations {
@@ -107,11 +108,11 @@ fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Opti
 }
 
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> StdResult<Response<TerraMsgWrapper>> {
+) -> StdResult<Response<TerraMsg>> {
     let sender = deps.api.addr_validate(&cw20_msg.sender)?;
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::ExecuteSwapOperations {
@@ -133,13 +134,13 @@ pub fn receive_cw20(
 }
 
 pub fn execute_swap_operations(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     sender: Addr,
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
-) -> StdResult<Response<TerraMsgWrapper>> {
+) -> StdResult<Response<TerraMsg>> {
     let operations_len = operations.len();
     if operations_len == 0 {
         return Err(StdError::generic_err("must provide operations"));
@@ -152,7 +153,7 @@ pub fn execute_swap_operations(
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
     let mut operation_index = 0;
-    let mut messages: Vec<CosmosMsg<TerraMsgWrapper>> = operations
+    let mut messages: Vec<CosmosMsg<TerraMsg>> = operations
         .into_iter()
         .map(|op| {
             operation_index += 1;
@@ -169,7 +170,7 @@ pub fn execute_swap_operations(
                 })?,
             }))
         })
-        .collect::<StdResult<Vec<CosmosMsg<TerraMsgWrapper>>>>()?;
+        .collect::<StdResult<Vec<CosmosMsg<TerraMsg>>>>()?;
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
@@ -191,12 +192,12 @@ pub fn execute_swap_operations(
 }
 
 fn assert_minium_receive(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minium_receive: Uint128,
     receiver: Addr,
-) -> StdResult<Response<TerraMsgWrapper>> {
+) -> StdResult<Response<TerraMsg>> {
     let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
@@ -211,7 +212,7 @@ fn assert_minium_receive(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::SimulateSwapOperations {
@@ -227,7 +228,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<TerraQuery>) -> StdResult<ConfigResponse> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -245,7 +246,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 fn simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
@@ -338,7 +339,7 @@ fn simulate_swap_operations(
 }
 
 fn reverse_simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     ask_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
@@ -412,7 +413,7 @@ fn reverse_simulate_swap_operations(
 }
 
 fn simulate_return_amount(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     factory: Addr,
     mut offer_amount: Uint128,
     offer_asset_info: AssetInfo,
@@ -452,7 +453,7 @@ fn simulate_return_amount(
 }
 
 fn reverse_simulate_return_amount(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     factory: Addr,
     ask_amount: Uint128,
     offer_asset_info: AssetInfo,
