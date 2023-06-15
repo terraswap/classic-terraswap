@@ -802,6 +802,7 @@ dependencies = [
 name = "terraswap-factory"
 version = "0.0.0"
 dependencies = [
+ "classic-bindings",
  "classic_terraswap",
  "cosmwasm-schema",
  "cosmwasm-std",

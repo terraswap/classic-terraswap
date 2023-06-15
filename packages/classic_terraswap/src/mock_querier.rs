@@ -360,7 +360,7 @@ mod mock_exception {
         assert_eq!(
             deps.querier.raw_query(&[]),
             SystemResult::Err(SystemError::InvalidRequest {
-                error: "Parsing query request: Error parsing into type cosmwasm_std::query::QueryRequest<terra_cosmwasm::query::TerraQueryWrapper>: EOF while parsing a JSON value.".to_string(),
+                error: "Parsing query request: Error parsing into type cosmwasm_std::query::QueryRequest<classic_bindings::query::TerraQuery>: EOF while parsing a JSON value.".to_string(),
                 request: Binary(vec![])
             })
         );

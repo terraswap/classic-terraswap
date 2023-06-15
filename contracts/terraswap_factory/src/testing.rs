@@ -1,3 +1,5 @@
+use classic_bindings::TerraQuery;
+
 use crate::contract::{execute, instantiate, query, reply};
 use classic_terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 
@@ -13,8 +15,8 @@ use classic_terraswap::pair::{
 };
 use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coin, coins, from_binary, to_binary, Addr, ContractResult, CosmosMsg, OwnedDeps, Reply,
-    ReplyOn, Response, StdError, SubMsg, SubMsgExecutionResponse, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, SubMsgResult, SubMsgResponse, CosmosMsg, OwnedDeps, Reply, ReplyOn,
+    Response, StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -107,8 +109,8 @@ fn update_config() {
 }
 
 fn init(
-    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQuery>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQuery> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
@@ -451,7 +453,7 @@ fn reply_only_create_pair() {
 
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(vec![10, 4, 48, 48, 48, 48].into()),
         }),
