@@ -15,8 +15,8 @@ use classic_terraswap::pair::{
 };
 use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, CosmosMsg, OwnedDeps, Reply, ReplyOn, Response, StdError,
-    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, coins, from_binary, to_binary, Addr, CosmosMsg, OwnedDeps, Reply, ReplyOn,
+    Response, StdError, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -544,7 +544,7 @@ fn reply_create_pair_with_provide() {
 
     let reply_msg = Reply {
         id: 1,
-        result: ContractResult::Ok(SubMsgExecutionResponse {
+        result: SubMsgResult::Ok(SubMsgResponse {
             events: vec![],
             data: Some(vec![10, 8, 112, 97, 105, 114, 48, 48, 48, 48].into()),
         }),
@@ -647,7 +647,7 @@ fn failed_reply_with_unknown_id() {
         mock_env(),
         Reply {
             id: 9,
-            result: ContractResult::Ok(SubMsgExecutionResponse {
+            result: SubMsgResult::Ok(SubMsgResponse {
                 events: vec![],
                 data: Some(vec![].into()),
             }),

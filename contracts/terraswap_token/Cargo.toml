@@ -31,4 +31,4 @@ classic_terraswap = { path = "../../packages/classic_terraswap", version = "2.7.
 [dev-dependencies]
 # we only need to enable this if we use integration tests
 cosmwasm-schema = { version = "1.0.0" }
-cosmwasm-storage = { version = "1.1" }
+cosmwasm-storage = { version = "1.0.0" }

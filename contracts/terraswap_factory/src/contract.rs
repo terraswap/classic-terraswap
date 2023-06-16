@@ -16,7 +16,7 @@ use crate::state::{
 
 use classic_bindings::{TerraMsg, TerraQuery};
 
-use classic_terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
+use classic_terraswap::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw};
 use classic_terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
     PairsResponse, QueryMsg,
@@ -117,8 +117,8 @@ pub fn execute_update_config(
 pub fn execute_create_pair(
     deps: DepsMut<TerraQuery>,
     env: Env,
-    _info: MessageInfo,
-    asset_infos: [AssetInfo; 2],
+    info: MessageInfo,
+    assets: [Asset; 2],
 ) -> StdResult<Response<TerraMsg>> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -247,7 +247,7 @@ pub fn execute_migrate_pair(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> StdResult<Response<TerraMsg>> {
+pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> StdResult<Response<TerraMsg>> {
     if msg.id != CREATE_PAIR_REPLY_ID {
         return Err(StdError::generic_err("invalid reply msg"));
     }
@@ -278,7 +278,7 @@ pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> StdResult<Resp
         },
     )?;
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg<TerraMsg>> = vec![];
     if !tmp_pair_info.assets[0].amount.is_zero() || !tmp_pair_info.assets[1].amount.is_zero() {
         let assets = [
             tmp_pair_info.assets[0].to_normal(deps.api)?,

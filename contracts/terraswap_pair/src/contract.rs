@@ -289,8 +289,9 @@ pub fn provide_liquidity(
         // Initial share = collateral amount
         let deposit0: Uint256 = deposits[0].into();
         let deposit1: Uint256 = deposits[1].into();
-        match (Decimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt() * Uint256::from(1u8))
-            .try_into()
+        let share: Uint128 = match (Decimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt()
+            * Uint256::from(1u8))
+        .try_into()
         {
             Ok(share) => share,
             Err(e) => return Err(ContractError::ConversionOverflowError(e)),
@@ -678,10 +679,9 @@ fn compute_swap(
 
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let cp: Uint256 = offer_pool * ask_pool;
-    let return_amount: Uint256 = (Decimal256::from_ratio(ask_pool, 1u8)
-        - Decimal256::from_ratio(cp, offer_pool + offer_amount))
-        * Uint256::from(1u8);
+    let return_amount: Uint256 = (Decimal256::from_ratio(ask_pool * offer_amount, 1u8)
+        / Decimal256::from_ratio(offer_pool + offer_amount, 1u8))
+    .to_uint_floor();
 
     // calculate spread & commission
     let spread_amount: Uint256 =
@@ -814,7 +814,7 @@ pub fn assert_max_spread(
         let belief_price: Decimal256 = belief_price.into();
         let max_spread: Decimal256 = max_spread.into();
 
-        let expected_return = offer_amount.div_floor(belief_price);
+        let expected_return = offer_amount * (Decimal256::one() / belief_price);
         let spread_amount = if expected_return > return_amount {
             expected_return - return_amount
         } else {

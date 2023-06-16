@@ -15,8 +15,8 @@ use classic_terraswap::pair::{
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coins, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError,
-    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 
@@ -372,7 +372,7 @@ fn provide_liquidity() {
         }],
     );
 
-    let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res: Response<TerraMsg> = execute(deps.as_mut(), env, info, msg).unwrap();
     let transfer_from_msg = res.messages.get(0).expect("no message");
     let mint_msg = res.messages.get(1).expect("no message");
 
@@ -702,7 +702,7 @@ fn failed_reply_with_unknown_id() {
         mock_env(),
         Reply {
             id: 9,
-            result: ContractResult::Ok(SubMsgExecutionResponse {
+            result: SubMsgResult::Ok(SubMsgResponse {
                 events: vec![],
                 data: Some(vec![].into()),
             }),
