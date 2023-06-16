@@ -1,6 +1,6 @@
 # 2.7.0
 
-* [4e44194](https://github.com/terraswap/classic-terraswap/pull/14/commits/4e44194a1c42efd07b1652db6b09bbb9996e0508) Applied `classic-bindings`
+* [cd1f48](https://github.com/terraswap/classic-terraswap/pull/14/commits/cd1f48c7302c1780e7365214c26b7ccb5eaefb12) Applied `classic-bindings`
 
 # 2.6.1
 
