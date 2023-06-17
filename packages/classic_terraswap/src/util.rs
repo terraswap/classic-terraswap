@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, StdError, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 
@@ -12,7 +13,7 @@ pub fn assert_deadline(blocktime: u64, deadline: Option<u64>) -> StdResult<()> {
 }
 
 pub fn migrate_version(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     target_contract_version: &str,
     name: &str,
     version: &str,

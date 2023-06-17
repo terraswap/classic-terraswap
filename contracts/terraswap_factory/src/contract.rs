@@ -14,6 +14,8 @@ use crate::state::{
     PAIRS, TMP_PAIR_INFO,
 };
 
+use classic_bindings::{TerraMsg, TerraQuery};
+
 use classic_terraswap::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw};
 use classic_terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
@@ -34,11 +36,11 @@ const CREATE_PAIR_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
@@ -53,7 +55,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut<TerraQuery>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response<TerraMsg>> {
     match msg {
         ExecuteMsg::UpdateConfig {
             owner,
@@ -72,13 +79,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 // Only owner can execute it
 pub fn execute_update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     info: MessageInfo,
     owner: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
     // permission check
@@ -108,11 +115,11 @@ pub fn execute_update_config(
 
 // Anyone can execute it to create swap pair
 pub fn execute_create_pair(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     if assets[0].info == assets[1].info {
@@ -184,12 +191,12 @@ pub fn execute_create_pair(
 }
 
 pub fn execute_add_native_token_decimals(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     denom: String,
     decimals: u8,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     // permission check
@@ -214,12 +221,12 @@ pub fn execute_add_native_token_decimals(
 }
 
 pub fn execute_migrate_pair(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     info: MessageInfo,
     contract: String,
     code_id: Option<u64>,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     // permission check
@@ -240,7 +247,7 @@ pub fn execute_migrate_pair(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> StdResult<Response<TerraMsg>> {
     if msg.id != CREATE_PAIR_REPLY_ID {
         return Err(StdError::generic_err("invalid reply msg"));
     }
@@ -271,7 +278,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
         },
     )?;
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg<TerraMsg>> = vec![];
     if !tmp_pair_info.assets[0].amount.is_zero() || !tmp_pair_info.assets[1].amount.is_zero() {
         let assets = [
             tmp_pair_info.assets[0].to_normal(deps.api)?,
@@ -326,7 +333,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> StdResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Pair { asset_infos } => to_binary(&query_pair(deps, asset_infos)?),
@@ -339,7 +346,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<TerraQuery>) -> StdResult<ConfigResponse> {
     let state: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&state.owner)?.to_string(),
@@ -350,7 +357,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(resp)
 }
 
-pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
+pub fn query_pair(deps: Deps<TerraQuery>, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
     let pair_key = pair_key(&[
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,
@@ -360,7 +367,7 @@ pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo
 }
 
 pub fn query_pairs(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
 ) -> StdResult<PairsResponse> {
@@ -380,7 +387,7 @@ pub fn query_pairs(
 }
 
 pub fn query_native_token_decimal(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     denom: String,
 ) -> StdResult<NativeTokenDecimalsResponse> {
     let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;
@@ -390,7 +397,11 @@ pub fn query_native_token_decimal(
 
 const TARGET_CONTRACT_VERSION: &str = "0.0.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> StdResult<Response<TerraMsg>> {
     migrate_version(
         deps,
         TARGET_CONTRACT_VERSION,

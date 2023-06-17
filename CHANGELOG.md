@@ -1,3 +1,7 @@
+# 2.7.0
+
+* [cd1f48](https://github.com/terraswap/classic-terraswap/pull/14/commits/cd1f48c7302c1780e7365214c26b7ccb5eaefb12) Applied `classic-bindings`
+
 # 2.6.1
 
 * [a7b30f](https://github.com/terraswap/classic-terraswap/pull/4/commits/a7b30f1c5e8585cdc05240dd8aca5f37a0765d96) Fixed parse decimals
