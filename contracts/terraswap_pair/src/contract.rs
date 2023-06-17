@@ -679,9 +679,7 @@ fn compute_swap(
 
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let return_amount: Uint256 = (Decimal256::from_ratio(ask_pool * offer_amount, 1u8)
-        / Decimal256::from_ratio(offer_pool + offer_amount, 1u8))
-    .to_uint_floor();
+    let return_amount: Uint256 = (ask_pool * offer_amount) / (offer_pool + offer_amount);
 
     // calculate spread & commission
     let spread_amount: Uint256 =
