@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-pair"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition = "2021"
 description = "A Terraswap pair contract"
