@@ -2,6 +2,7 @@ use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
 
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
     QueryRequest, StdResult, Uint128, WasmQuery,
@@ -10,7 +11,7 @@ use cosmwasm_std::{
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 pub fn query_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     account_addr: Addr,
     denom: String,
 ) -> StdResult<Uint128> {
@@ -22,7 +23,10 @@ pub fn query_balance(
     Ok(balance.amount.amount)
 }
 
-pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdResult<Vec<Coin>> {
+pub fn query_all_balances(
+    querier: &QuerierWrapper<TerraQuery>,
+    account_addr: Addr,
+) -> StdResult<Vec<Coin>> {
     // load price form the oracle
     let all_balances: AllBalanceResponse =
         querier.query(&QueryRequest::Bank(BankQuery::AllBalances {
@@ -32,7 +36,7 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
 }
 
 pub fn query_token_balance(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     contract_addr: Addr,
     account_addr: Addr,
 ) -> StdResult<Uint128> {
@@ -48,7 +52,7 @@ pub fn query_token_balance(
 }
 
 pub fn query_token_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     contract_addr: Addr,
 ) -> StdResult<TokenInfoResponse> {
     let token_info: TokenInfoResponse = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -60,7 +64,7 @@ pub fn query_token_info(
 }
 
 pub fn query_native_decimals(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     factory_contract: Addr,
     denom: String,
 ) -> StdResult<u8> {
@@ -73,7 +77,7 @@ pub fn query_native_decimals(
 }
 
 pub fn query_pair_info(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     factory_contract: Addr,
     asset_infos: &[AssetInfo; 2],
 ) -> StdResult<PairInfo> {
@@ -86,7 +90,7 @@ pub fn query_pair_info(
 }
 
 pub fn simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     pair_contract: Addr,
     offer_asset: &Asset,
 ) -> StdResult<SimulationResponse> {
@@ -99,7 +103,7 @@ pub fn simulate(
 }
 
 pub fn reverse_simulate(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     pair_contract: Addr,
     ask_asset: &Asset,
 ) -> StdResult<ReverseSimulationResponse> {
@@ -112,7 +116,7 @@ pub fn reverse_simulate(
 }
 
 pub fn query_pair_info_from_pair(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<TerraQuery>,
     pair_contract: Addr,
 ) -> StdResult<PairInfo> {
     let pair_info: PairInfo = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {

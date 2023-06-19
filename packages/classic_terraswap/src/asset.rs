@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
+use classic_bindings::{TerraMsg, TerraQuerier, TerraQuery};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terra_cosmwasm::TerraQuerier;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
@@ -29,7 +29,7 @@ impl Asset {
         self.info.is_native_token()
     }
 
-    pub fn compute_tax(&self, querier: &QuerierWrapper) -> StdResult<Uint128> {
+    pub fn compute_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
             let terra_querier = TerraQuerier::new(querier);
@@ -47,7 +47,7 @@ impl Asset {
         }
     }
 
-    pub fn deduct_tax(&self, querier: &QuerierWrapper) -> StdResult<Coin> {
+    pub fn deduct_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Coin> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
             Ok(Coin {
@@ -59,7 +59,11 @@ impl Asset {
         }
     }
 
-    pub fn into_msg(self, querier: &QuerierWrapper, recipient: Addr) -> StdResult<CosmosMsg> {
+    pub fn into_msg(
+        self,
+        querier: &QuerierWrapper<TerraQuery>,
+        recipient: Addr,
+    ) -> StdResult<CosmosMsg<TerraMsg>> {
         let amount = self.amount;
 
         match &self.info {
@@ -78,7 +82,11 @@ impl Asset {
         }
     }
 
-    pub fn into_submsg(self, querier: &QuerierWrapper, recipient: Addr) -> StdResult<SubMsg> {
+    pub fn into_submsg(
+        self,
+        querier: &QuerierWrapper<TerraQuery>,
+        recipient: Addr,
+    ) -> StdResult<SubMsg<TerraMsg>> {
         Ok(SubMsg::new(self.into_msg(querier, recipient)?))
     }
 
@@ -158,7 +166,7 @@ impl AssetInfo {
     }
     pub fn query_pool(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<TerraQuery>,
         api: &dyn Api,
         pool_addr: Addr,
     ) -> StdResult<Uint128> {
@@ -193,7 +201,11 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(&self, account_addr: Addr, querier: &QuerierWrapper) -> StdResult<u8> {
+    pub fn query_decimals(
+        &self,
+        account_addr: Addr,
+        querier: &QuerierWrapper<TerraQuery>,
+    ) -> StdResult<u8> {
         match self {
             AssetInfo::NativeToken { denom } => {
                 query_native_decimals(querier, account_addr, denom.to_string())
@@ -307,7 +319,7 @@ impl PairInfoRaw {
 
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<TerraQuery>,
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 2]> {

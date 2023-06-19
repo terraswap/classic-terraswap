@@ -8,27 +8,32 @@ use cosmwasm_std::{
 use crate::querier::compute_tax;
 use crate::state::{Config, CONFIG};
 
+use classic_bindings::{TerraMsg, TerraQuery};
+
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo};
 use classic_terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use classic_terraswap::querier::{query_balance, query_pair_info, query_token_balance};
 use classic_terraswap::router::SwapOperation;
+use classic_terraswap::util::assert_deadline;
 use cw20::Cw20ExecuteMsg;
-use terra_cosmwasm::{create_swap_msg, create_swap_send_msg, TerraMsgWrapper};
 
 /// Execute swap operation
 /// swap all offer asset to ask asset
 pub fn execute_swap_operation(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
-) -> StdResult<Response<TerraMsgWrapper>> {
+    deadline: Option<u64>,
+) -> StdResult<Response<TerraMsg>> {
     if env.contract.address != info.sender {
         return Err(StdError::generic_err("unauthorized"));
     }
 
-    let messages: Vec<CosmosMsg<TerraMsgWrapper>> = match operation {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
+    let messages: Vec<CosmosMsg<TerraMsg>> = match operation {
         SwapOperation::NativeSwap {
             offer_denom,
             ask_denom,
@@ -40,22 +45,22 @@ pub fn execute_swap_operation(
                 // deduct tax from the offer_coin
                 let amount =
                     amount.checked_sub(compute_tax(&deps.querier, amount, offer_denom.clone())?)?;
-                vec![create_swap_send_msg(
+                vec![CosmosMsg::from(TerraMsg::create_swap_send_msg(
                     to,
                     Coin {
                         denom: offer_denom,
                         amount,
                     },
                     ask_denom,
-                )]
+                ))]
             } else {
-                vec![create_swap_msg(
+                vec![CosmosMsg::from(TerraMsg::create_swap_msg(
                     Coin {
                         denom: offer_denom,
                         amount,
                     },
                     ask_denom,
-                )]
+                ))]
             }
         }
         SwapOperation::TerraSwap {
@@ -169,12 +174,12 @@ pub fn execute_swap_operation(
 }
 
 pub fn asset_into_swap_msg(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     pair_contract: Addr,
     offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
-) -> StdResult<CosmosMsg<TerraMsgWrapper>> {
+) -> StdResult<CosmosMsg<TerraMsg>> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => {
             // deduct tax first
@@ -195,6 +200,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline: None,
                 })?,
             }))
         }
@@ -209,6 +215,7 @@ pub fn asset_into_swap_msg(
                     belief_price: None,
                     max_spread,
                     to,
+                    deadline: None,
                 })?,
             })?,
         })),

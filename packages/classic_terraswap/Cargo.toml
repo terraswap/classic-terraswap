@@ -1,8 +1,8 @@
 [package]
 name = "classic_terraswap"
-version = "2.6.1"
+version = "2.7.0"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
-edition = "2018"
+edition = "2021"
 description = "Common terraswap types"
 license = "Apache-2.0"
 repository = "https://github.com/terraswap/classic-terraswap"
@@ -17,16 +17,17 @@ documentation = "https://docs.terraswap.io"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw20 = { version = "0.8.0" } 
-cosmwasm-storage = { version = "0.16.0" }
-terra-cosmwasm = { version = "2.2.0" }
-cosmwasm-std = { version = "0.16.7" }
+cw2 = { version = "0.14.0" }
+cw20 = { version = "0.14.0" }
+cosmwasm-storage = { version = "1.0.0" }
+classic-bindings = { version = "0.1.1" }
+cosmwasm-std = { version = "1.0.0" }
 schemars = "0.8.1"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 protobuf = { version = "2", features = ["with-bytes"] }
 
 [dev-dependencies]
-cosmwasm-schema = "0.16.0"
+cosmwasm-schema = { version = "1.0.0" }
 
 [profile.release]
 opt-level = 3

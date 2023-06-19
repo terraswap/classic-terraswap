@@ -6,9 +6,12 @@ use crate::state::PAIR_INFO;
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Decimal256, Deps,
+    DepsMut, Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128,
+    Uint256, WasmMsg,
 };
+
+use classic_bindings::{TerraMsg, TerraQuery};
 
 use classic_terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use classic_terraswap::pair::{
@@ -17,13 +20,13 @@ use classic_terraswap::pair::{
 };
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use cosmwasm_bignumber::{Decimal256, Uint256};
+use classic_terraswap::util::{assert_deadline, migrate_version};
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
-use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
 use std::cmp::Ordering;
-use std::str::FromStr;
+use std::convert::TryInto;
+use std::ops::Mul;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
@@ -32,14 +35,17 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE: &str = "0.003";
+const COMMISSION_RATE: u64 = 3;
+
+const MINIMUM_LIQUIDITY_AMOUNT: u128 = 1_000;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> StdResult<Response<TerraMsg>> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let pair_info: &PairInfoRaw = &PairInfoRaw {
@@ -81,23 +87,33 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> Result<Response<TerraMsg>, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ProvideLiquidity {
             assets,
-            slippage_tolerance,
             receiver,
-        } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
+            deadline,
+            slippage_tolerance,
+        } => provide_liquidity(
+            deps,
+            env,
+            info,
+            assets,
+            receiver,
+            deadline,
+            slippage_tolerance,
+        ),
         ExecuteMsg::Swap {
             offer_asset,
             belief_price,
             max_spread,
             to,
+            deadline,
         } => {
             if !offer_asset.is_native_token() {
                 return Err(ContractError::Unauthorized {});
@@ -118,17 +134,18 @@ pub fn execute(
                 belief_price,
                 max_spread,
                 to_addr,
+                deadline,
             )
         }
     }
 }
 
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
+) -> Result<Response<TerraMsg>, ContractError> {
     let contract_addr = info.sender.clone();
 
     match from_binary(&cw20_msg.msg) {
@@ -136,6 +153,7 @@ pub fn receive_cw20(
             belief_price,
             max_spread,
             to,
+            deadline,
         }) => {
             // only asset contract can execute this message
             let mut authorized: bool = false;
@@ -174,16 +192,28 @@ pub fn receive_cw20(
                 belief_price,
                 max_spread,
                 to_addr,
+                deadline,
             )
         }
-        Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
+        Ok(Cw20HookMsg::WithdrawLiquidity {
+            min_assets,
+            deadline,
+        }) => {
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
             if deps.api.addr_canonicalize(info.sender.as_str())? != config.liquidity_token {
                 return Err(ContractError::Unauthorized {});
             }
 
             let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            withdraw_liquidity(deps, env, info, sender_addr, cw20_msg.amount)
+            withdraw_liquidity(
+                deps,
+                env,
+                info,
+                sender_addr,
+                cw20_msg.amount,
+                min_assets,
+                deadline,
+            )
         }
         Err(err) => Err(ContractError::Std(err)),
     }
@@ -191,7 +221,11 @@ pub fn receive_cw20(
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> StdResult<Response<TerraMsg>> {
+    if msg.id != INSTANTIATE_REPLY_ID {
+        return Err(StdError::generic_err("invalid reply msg"));
+    }
+
     let data = msg.result.unwrap().data.unwrap();
     let res: MsgInstantiateContractResponse =
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
@@ -210,13 +244,16 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
 /// CONTRACT - should approve contract to use the amount of token
 pub fn provide_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     assets: [Asset; 2],
-    slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
-) -> Result<Response, ContractError> {
+    deadline: Option<u64>,
+    slippage_tolerance: Option<Decimal>,
+) -> Result<Response<TerraMsg>, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
     }
@@ -237,34 +274,49 @@ pub fn provide_liquidity(
             .expect("Wrong asset info is given"),
     ];
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg<TerraMsg>> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
-        // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.to_string(),
-                    recipient: env.contract.address.to_string(),
-                    amount: deposits[i],
-                })?,
-                funds: vec![],
-            }));
-        } else {
+        if pool.is_native_token() {
             // If the asset is native token, balance is already increased
             // To calculated properly we should subtract user deposit from the pool
             pool.amount = pool.amount.checked_sub(deposits[i])?;
         }
     }
 
-    // assert slippage tolerance
-    assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
-
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
-    let share = if total_share == Uint128::zero() {
+    let share = if total_share.is_zero() {
         // Initial share = collateral amount
-        Uint128::from((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
+        let deposit0: Uint256 = deposits[0].into();
+        let deposit1: Uint256 = deposits[1].into();
+        let share: Uint128 = match (Decimal256::from_ratio(deposit0.mul(deposit1), 1u8).sqrt()
+            * Uint256::from(1u8))
+        .try_into()
+        {
+            Ok(share) => share,
+            Err(e) => return Err(ContractError::ConversionOverflowError(e)),
+        };
+
+        // the initial liquidity is deducted by MINIMUM_LIQUIDITY_AMOUNT
+        // to protect a pair from malicious provision blocking
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: deps
+                .api
+                .addr_humanize(&pair_info.liquidity_token)?
+                .to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Mint {
+                recipient: env.contract.address.to_string(),
+                amount: MINIMUM_LIQUIDITY_AMOUNT.into(),
+            })?,
+            funds: vec![],
+        }));
+
+        share
+            .checked_sub(MINIMUM_LIQUIDITY_AMOUNT.into())
+            .map_err(|_| ContractError::MinimumLiquidityAmountError {
+                min_lp_token: MINIMUM_LIQUIDITY_AMOUNT.to_string(),
+                given_lp: share.to_string(),
+            })?
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
@@ -280,6 +332,57 @@ pub fn provide_liquidity(
     // prevent providing free token
     if share.is_zero() {
         return Err(ContractError::InvalidZeroAmount {});
+    }
+
+    // refund of remaining native token & desired of token
+    let mut refund_assets: Vec<Asset> = vec![];
+    for (i, pool) in pools.iter().enumerate() {
+        let desired_amount = match total_share.is_zero() {
+            true => deposits[i],
+            false => {
+                let mut desired_amount = pool.amount.multiply_ratio(share, total_share);
+                if desired_amount.multiply_ratio(total_share, share) != pool.amount {
+                    desired_amount += Uint128::from(1u8);
+                }
+
+                desired_amount
+            }
+        };
+
+        let remain_amount = deposits[i] - desired_amount;
+        if let Some(slippage_tolerance) = slippage_tolerance {
+            if remain_amount > deposits[i] * slippage_tolerance {
+                return Err(ContractError::MaxSlippageAssertion {});
+            }
+        }
+        refund_assets.push(Asset {
+            info: pool.info.clone(),
+            amount: remain_amount,
+        });
+
+        if let AssetInfo::NativeToken { denom, .. } = &pool.info {
+            if !remain_amount.is_zero() {
+                let msg = Asset {
+                    amount: remain_amount,
+                    info: AssetInfo::NativeToken {
+                        denom: denom.to_string(),
+                    },
+                }
+                .into_msg(&deps.querier, info.sender.clone())?;
+
+                messages.push(msg);
+            }
+        } else if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: contract_addr.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                    owner: info.sender.to_string(),
+                    recipient: env.contract.address.to_string(),
+                    amount: desired_amount,
+                })?,
+                funds: vec![],
+            }));
+        }
     }
 
     // mint LP token to sender
@@ -302,16 +405,24 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         ("assets", &format!("{}, {}", assets[0], assets[1])),
         ("share", &share.to_string()),
+        (
+            "refund_assets",
+            &format!("{}, {}", refund_assets[0], refund_assets[1]),
+        ),
     ]))
 }
 
 pub fn withdraw_liquidity(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     _info: MessageInfo,
     sender: Addr,
     amount: Uint128,
-) -> Result<Response, ContractError> {
+    min_assets: Option<[Asset; 2]>,
+    deadline: Option<u64>,
+) -> Result<Response<TerraMsg>, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
 
@@ -326,6 +437,8 @@ pub fn withdraw_liquidity(
             amount: a.amount * share_ratio,
         })
         .collect();
+
+    assert_minimum_assets(refund_assets.to_vec(), min_assets)?;
 
     // update pool info
     Ok(Response::new()
@@ -360,7 +473,7 @@ pub fn withdraw_liquidity(
 // CONTRACT - a user must do token approval
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     sender: Addr,
@@ -368,7 +481,10 @@ pub fn swap(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
-) -> Result<Response, ContractError> {
+    deadline: Option<u64>,
+) -> Result<Response<TerraMsg>, ContractError> {
+    assert_deadline(env.block.time.seconds(), deadline)?;
+
     offer_asset.assert_sent_native_token_balance(&info)?;
 
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -406,7 +522,7 @@ pub fn swap(
 
     let offer_amount = offer_asset.amount;
     let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount);
+        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount)?;
 
     let return_asset = Asset {
         info: ask_pool.info.clone(),
@@ -428,7 +544,7 @@ pub fn swap(
     let tax_amount = return_asset.compute_tax(&deps.querier)?;
     let receiver = to.unwrap_or_else(|| sender.clone());
 
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg<TerraMsg>> = vec![];
     if !return_amount.is_zero() {
         messages.push(return_asset.into_msg(&deps.querier, receiver.clone())?);
     }
@@ -450,7 +566,7 @@ pub fn swap(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Pair {} => Ok(to_binary(&query_pair_info(deps)?)?),
         QueryMsg::Pool {} => Ok(to_binary(&query_pool(deps)?)?),
@@ -463,14 +579,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     }
 }
 
-pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
+pub fn query_pair_info(deps: Deps<TerraQuery>) -> Result<PairInfo, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let pair_info = pair_info.to_normal(deps.api)?;
 
     Ok(pair_info)
 }
 
-pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
+pub fn query_pool(deps: Deps<TerraQuery>) -> Result<PoolResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
     let assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
@@ -489,7 +605,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
 }
 
 pub fn query_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_asset: Asset,
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -510,7 +626,7 @@ pub fn query_simulation(
     }
 
     let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount);
+        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount)?;
 
     Ok(SimulationResponse {
         return_amount,
@@ -520,7 +636,7 @@ pub fn query_simulation(
 }
 
 pub fn query_reverse_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     ask_asset: Asset,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -541,7 +657,7 @@ pub fn query_reverse_simulation(
     }
 
     let (offer_amount, spread_amount, commission_amount) =
-        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount);
+        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount)?;
 
     Ok(ReverseSimulationResponse {
         offer_amount,
@@ -550,43 +666,37 @@ pub fn query_reverse_simulation(
     })
 }
 
-pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
-    match coins.iter().find(|x| x.denom == denom) {
-        Some(coin) => coin.amount,
-        None => Uint128::zero(),
-    }
-}
-
 fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
     offer_amount: Uint128,
-) -> (Uint128, Uint128, Uint128) {
+) -> StdResult<(Uint128, Uint128, Uint128)> {
     let offer_pool: Uint256 = offer_pool.into();
     let ask_pool: Uint256 = ask_pool.into();
     let offer_amount: Uint256 = offer_amount.into();
 
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let cp: Uint256 = offer_pool * ask_pool;
-    let return_amount: Uint256 = (Decimal256::from_uint256(ask_pool)
-        - Decimal256::from_ratio(cp, offer_pool + offer_amount))
-        * Uint256::one();
+    let return_amount: Uint256 = (ask_pool * offer_amount) / (offer_pool + offer_amount);
 
     // calculate spread & commission
     let spread_amount: Uint256 =
         (offer_amount * Decimal256::from_ratio(ask_pool, offer_pool)) - return_amount;
-    let commission_amount: Uint256 = return_amount * commission_rate;
+    let mut commission_amount: Uint256 = return_amount * commission_rate;
+    if return_amount != (commission_amount * (Decimal256::one() / commission_rate)) {
+        commission_amount += Uint256::from(1u128);
+    }
 
     // commission will be absorbed to pool
     let return_amount: Uint256 = return_amount - commission_amount;
-    (
-        return_amount.into(),
-        spread_amount.into(),
-        commission_amount.into(),
-    )
+
+    Ok((
+        return_amount.try_into()?,
+        spread_amount.try_into()?,
+        commission_amount.try_into()?,
+    ))
 }
 
 #[test]
@@ -595,7 +705,9 @@ fn test_compute_swap_with_huge_pool_variance() {
     let ask_pool = Uint128::from(317u128);
 
     assert_eq!(
-        compute_swap(offer_pool, ask_pool, Uint128::from(1u128)).0,
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128))
+            .unwrap()
+            .0,
         Uint128::zero()
     );
 }
@@ -604,12 +716,12 @@ fn compute_offer_amount(
     offer_pool: Uint128,
     ask_pool: Uint128,
     ask_amount: Uint128,
-) -> (Uint128, Uint128, Uint128) {
+) -> StdResult<(Uint128, Uint128, Uint128)> {
     let offer_pool: Uint256 = offer_pool.into();
     let ask_pool: Uint256 = ask_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
 
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
+    let commission_rate = Decimal256::permille(COMMISSION_RATE);
 
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
@@ -617,12 +729,20 @@ fn compute_offer_amount(
 
     let one_minus_commission = Decimal256::one() - commission_rate;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
+    let mut before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
+    if before_commission_deduction * one_minus_commission != ask_amount {
+        before_commission_deduction += Uint256::one();
+    }
 
-    let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
-        - offer_pool;
+    let after_ask_pool = ask_pool - before_commission_deduction;
+    let mut after_offer_pool = Uint256::one().multiply_ratio(cp, after_ask_pool);
 
-    let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
+    if after_offer_pool * (ask_pool - before_commission_deduction) != cp {
+        after_offer_pool += Uint256::one();
+    }
+
+    let offer_amount: Uint256 = after_offer_pool - offer_pool;
+
     let before_spread_deduction: Uint256 =
         offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
 
@@ -632,13 +752,13 @@ fn compute_offer_amount(
         Uint256::zero()
     };
 
-    let commission_amount = before_commission_deduction * commission_rate;
+    let commission_amount = before_commission_deduction - ask_amount;
 
-    (
-        offer_amount.into(),
-        spread_amount.into(),
-        commission_amount.into(),
-    )
+    Ok((
+        offer_amount.try_into()?,
+        spread_amount.try_into()?,
+        commission_amount.try_into()?,
+    ))
 }
 
 /// If `belief_price` and `max_spread` both are given,
@@ -692,7 +812,7 @@ pub fn assert_max_spread(
         let belief_price: Decimal256 = belief_price.into();
         let max_spread: Decimal256 = max_spread.into();
 
-        let expected_return = offer_amount / belief_price;
+        let expected_return = offer_amount * (Decimal256::one() / belief_price);
         let spread_amount = if expected_return > return_amount {
             expected_return - return_amount
         } else {
@@ -714,37 +834,53 @@ pub fn assert_max_spread(
     Ok(())
 }
 
-fn assert_slippage_tolerance(
-    slippage_tolerance: &Option<Decimal>,
-    deposits: &[Uint128; 2],
-    pools: &[Asset; 2],
+pub fn assert_minimum_assets(
+    assets: Vec<Asset>,
+    min_assets: Option<[Asset; 2]>,
 ) -> Result<(), ContractError> {
-    if let Some(slippage_tolerance) = *slippage_tolerance {
-        let slippage_tolerance: Decimal256 = slippage_tolerance.into();
-        if slippage_tolerance > Decimal256::one() {
-            return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
-        }
+    if let Some(min_assets) = min_assets {
+        min_assets.iter().try_for_each(|min_asset| {
+            match assets.iter().find(|asset| asset.info == min_asset.info) {
+                Some(asset) => {
+                    if asset.amount.cmp(&min_asset.amount).is_lt() {
+                        return Err(ContractError::MinAmountAssertion {
+                            min_asset: min_asset.to_string(),
+                            asset: asset.to_string(),
+                        });
+                    }
+                }
+                None => {
+                    return Err(ContractError::MinAmountAssertion {
+                        min_asset: min_asset.to_string(),
+                        asset: Asset {
+                            info: min_asset.info.clone(),
+                            amount: Uint128::zero(),
+                        }
+                        .to_string(),
+                    })
+                }
+            };
 
-        let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
-        let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
-
-        // Ensure each prices are not dropped as much as slippage tolerance rate
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
-        {
-            return Err(ContractError::MaxSlippageAssertion {});
-        }
+            Ok(())
+        })?;
     }
 
     Ok(())
 }
 
+const TARGET_CONTRACT_VERSION: &str = "0.1.1";
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> Result<Response<TerraMsg>, ContractError> {
+    migrate_version(
+        deps,
+        TARGET_CONTRACT_VERSION,
+        CONTRACT_NAME,
+        CONTRACT_VERSION,
+    )?;
 
     Ok(Response::default())
 }
