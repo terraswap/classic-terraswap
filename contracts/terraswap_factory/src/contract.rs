@@ -25,7 +25,6 @@ use classic_terraswap::pair::{
     ExecuteMsg as PairExecuteMsg, InstantiateMsg as PairInstantiateMsg,
     MigrateMsg as PairMigrateMsg,
 };
-use classic_terraswap::util::migrate_version;
 use protobuf::Message;
 
 // version info for migration info
@@ -395,19 +394,13 @@ pub fn query_native_token_decimal(
     Ok(NativeTokenDecimalsResponse { decimals })
 }
 
-const TARGET_CONTRACT_VERSION: &str = "0.0.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(
     deps: DepsMut<TerraQuery>,
     _env: Env,
     _msg: MigrateMsg,
 ) -> StdResult<Response<TerraMsg>> {
-    migrate_version(
-        deps,
-        TARGET_CONTRACT_VERSION,
-        CONTRACT_NAME,
-        CONTRACT_VERSION,
-    )?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())
 }

@@ -12,7 +12,7 @@ pub struct Config {
     pub token_code_id: u64,
 }
 
-pub const CONFIG: Item<Config> = Item::new("config");
+pub const CONFIG: Item<Config> = Item::new("\u{0}\u{6}config");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct TmpPairInfo {

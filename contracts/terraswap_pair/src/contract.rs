@@ -20,7 +20,7 @@ use classic_terraswap::pair::{
 };
 use classic_terraswap::querier::query_token_info;
 use classic_terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use classic_terraswap::util::{assert_deadline, migrate_version};
+use classic_terraswap::util::assert_deadline;
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use protobuf::Message;
@@ -868,19 +868,13 @@ pub fn assert_minimum_assets(
     Ok(())
 }
 
-const TARGET_CONTRACT_VERSION: &str = "0.1.1";
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(
     deps: DepsMut<TerraQuery>,
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response<TerraMsg>, ContractError> {
-    migrate_version(
-        deps,
-        TARGET_CONTRACT_VERSION,
-        CONTRACT_NAME,
-        CONTRACT_VERSION,
-    )?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())
 }
