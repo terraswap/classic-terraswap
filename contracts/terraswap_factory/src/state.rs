@@ -18,7 +18,6 @@ pub const CONFIG: Item<Config> = Item::new("\u{0}\u{6}config");
 pub struct TmpPairInfo {
     pub pair_key: Vec<u8>,
     pub assets: [AssetRaw; 2],
-    pub asset_decimals: [u8; 2],
     pub sender: Addr,
 }
 

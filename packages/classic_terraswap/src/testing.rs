@@ -403,7 +403,6 @@ fn query_terraswap_pair_contract() {
                 ],
                 contract_addr: "pair0000".to_string(),
                 liquidity_token: "liquidity0000".to_string(),
-                asset_decimals: [6u8, 6u8],
             },
         )],
         &[("uusd".to_string(), 6u8)],

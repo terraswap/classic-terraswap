@@ -135,7 +135,7 @@ impl Querier for WasmMockQuerier {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
-                    error: format!("Parsing query request: {}", e),
+                    error: format!("Parsing query request: {e}"),
                     request: bin_request.into(),
                 })
             }
@@ -221,7 +221,6 @@ impl WasmMockQuerier {
                                     denom: "uluna".to_string(),
                                 },
                             ],
-                            asset_decimals: [6u8, 6u8],
                             contract_addr: "pair0000".to_string(),
                             liquidity_token: "liquidity0000".to_string(),
                         })))
@@ -248,9 +247,8 @@ impl WasmMockQuerier {
                                     None => {
                                         return SystemResult::Err(SystemError::InvalidRequest {
                                             error: format!(
-                                                "No balance info exists for the contract {}",
-                                                contract_addr
-                                            ),
+                                        "No balance info exists for the contract {contract_addr}"
+                                    ),
                                             request: msg.as_slice().into(),
                                         })
                                     }
@@ -279,9 +277,8 @@ impl WasmMockQuerier {
                                     None => {
                                         return SystemResult::Err(SystemError::InvalidRequest {
                                             error: format!(
-                                                "No balance info exists for the contract {}",
-                                                contract_addr
-                                            ),
+                                        "No balance info exists for the contract {contract_addr}"
+                                    ),
                                             request: msg.as_slice().into(),
                                         })
                                     }

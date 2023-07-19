@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
+use crate::querier::{query_balance, query_token_balance, query_token_info};
 use classic_bindings::{TerraMsg, TerraQuerier, TerraQuery};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, MessageInfo,
@@ -140,8 +140,8 @@ pub enum AssetInfo {
 impl fmt::Display for AssetInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
-            AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
+            AssetInfo::NativeToken { denom } => write!(f, "{denom}"),
+            AssetInfo::Token { contract_addr } => write!(f, "{contract_addr}"),
         }
     }
 }
@@ -201,15 +201,9 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(
-        &self,
-        account_addr: Addr,
-        querier: &QuerierWrapper<TerraQuery>,
-    ) -> StdResult<u8> {
+    pub fn query_decimals(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<u8> {
         match self {
-            AssetInfo::NativeToken { denom } => {
-                query_native_decimals(querier, account_addr, denom.to_string())
-            }
+            AssetInfo::NativeToken { .. } => Ok(6u8),
             AssetInfo::Token { contract_addr } => {
                 let token_info = query_token_info(querier, Addr::unchecked(contract_addr))?;
                 Ok(token_info.decimals)
@@ -293,7 +287,6 @@ pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
     pub contract_addr: String,
     pub liquidity_token: String,
-    pub asset_decimals: [u8; 2],
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -301,7 +294,6 @@ pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
-    pub asset_decimals: [u8; 2],
 }
 
 impl PairInfoRaw {
@@ -313,7 +305,6 @@ impl PairInfoRaw {
                 self.asset_infos[0].to_normal(api)?,
                 self.asset_infos[1].to_normal(api)?,
             ],
-            asset_decimals: self.asset_decimals,
         })
     }
 

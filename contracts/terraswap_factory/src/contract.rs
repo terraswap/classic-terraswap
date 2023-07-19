@@ -66,10 +66,8 @@ pub fn execute(
             token_code_id,
             pair_code_id,
         } => execute_update_config(deps, env, info, owner, token_code_id, pair_code_id),
-        ExecuteMsg::CreatePair { assets } => execute_create_pair(deps, env, info, assets),
-        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            execute_add_native_token_decimals(deps, env, info, denom, decimals)
-        }
+        ExecuteMsg::CreatePair { .. } => Err(StdError::generic_err("deprecated")),
+        ExecuteMsg::AddNativeTokenDecimals { .. } => Err(StdError::generic_err("deprecated")),
         ExecuteMsg::MigratePair { contract, code_id } => {
             execute_migrate_pair(deps, env, info, contract, code_id)
         }
@@ -125,22 +123,6 @@ pub fn execute_create_pair(
         return Err(StdError::generic_err("same asset"));
     }
 
-    let asset_1_decimal = match assets[0]
-        .info
-        .query_decimals(env.contract.address.clone(), &deps.querier)
-    {
-        Ok(decimal) => decimal,
-        Err(_) => return Err(StdError::generic_err("asset1 is invalid")),
-    };
-
-    let asset_2_decimal = match assets[1]
-        .info
-        .query_decimals(env.contract.address.clone(), &deps.querier)
-    {
-        Ok(decimal) => decimal,
-        Err(_) => return Err(StdError::generic_err("asset2 is invalid")),
-    };
-
     let raw_assets = [assets[0].to_raw(deps.api)?, assets[1].to_raw(deps.api)?];
 
     let asset_infos = [assets[0].info.clone(), assets[1].info.clone()];
@@ -148,8 +130,6 @@ pub fn execute_create_pair(
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,
     ];
-
-    let asset_decimals = [asset_1_decimal, asset_2_decimal];
 
     let pair_key = pair_key(&raw_infos);
     if let Ok(Some(_)) = PAIRS.may_load(deps.storage, &pair_key) {
@@ -161,7 +141,6 @@ pub fn execute_create_pair(
         &TmpPairInfo {
             pair_key,
             assets: raw_assets,
-            asset_decimals,
             sender: info.sender,
         },
     )?;
@@ -182,7 +161,6 @@ pub fn execute_create_pair(
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
-                    asset_decimals,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -273,7 +251,6 @@ pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> StdResult<Respo
             liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
             contract_addr: deps.api.addr_canonicalize(pair_contract)?,
             asset_infos: raw_infos,
-            asset_decimals: tmp_pair_info.asset_decimals,
         },
     )?;
 

@@ -216,8 +216,7 @@ fn assert_minimum_receive(
 
     if swap_amount < minium_receive {
         return Err(StdError::generic_err(format!(
-            "assertion failed; minimum receive amount: {}, swap amount: {}",
-            minium_receive, swap_amount
+            "assertion failed; minimum receive amount: {minium_receive}, swap amount: {swap_amount}"
         )));
     }
 

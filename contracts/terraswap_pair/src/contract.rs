@@ -55,7 +55,6 @@ pub fn instantiate(
             msg.asset_infos[0].to_raw(deps.api)?,
             msg.asset_infos[1].to_raw(deps.api)?,
         ],
-        asset_decimals: msg.asset_decimals,
     };
 
     PAIR_INFO.save(deps.storage, pair_info)?;
@@ -494,8 +493,6 @@ pub fn swap(
     let offer_pool: Asset;
     let ask_pool: Asset;
 
-    let offer_decimal: u8;
-    let ask_decimal: u8;
     // If the asset balance is already increased
     // To calculated properly we should subtract user deposit from the pool
     if offer_asset.info.equal(&pools[0].info) {
@@ -504,18 +501,12 @@ pub fn swap(
             info: pools[0].info.clone(),
         };
         ask_pool = pools[1].clone();
-
-        offer_decimal = pair_info.asset_decimals[0];
-        ask_decimal = pair_info.asset_decimals[1];
     } else if offer_asset.info.equal(&pools[1].info) {
         offer_pool = Asset {
             amount: pools[1].amount.checked_sub(offer_asset.amount)?,
             info: pools[1].info.clone(),
         };
         ask_pool = pools[0].clone();
-
-        offer_decimal = pair_info.asset_decimals[1];
-        ask_decimal = pair_info.asset_decimals[0];
     } else {
         return Err(ContractError::AssetMismatch {});
     }
@@ -531,13 +522,12 @@ pub fn swap(
 
     // check max spread limit if exist
     assert_max_spread(
+        deps.as_ref(),
         belief_price,
         max_spread,
         offer_asset.clone(),
         return_asset.clone(),
         spread_amount,
-        offer_decimal,
-        ask_decimal,
     )?;
 
     // compute tax
@@ -765,14 +755,16 @@ fn compute_offer_amount(
 /// we compute new spread else we just use terraswap
 /// spread to check `max_spread`
 pub fn assert_max_spread(
+    deps: Deps<TerraQuery>,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     offer_asset: Asset,
     return_asset: Asset,
     spread_amount: Uint128,
-    offer_decimal: u8,
-    return_decimal: u8,
 ) -> Result<(), ContractError> {
+    let offer_decimal = offer_asset.info.query_decimals(&deps.querier)?;
+    let return_decimal = return_asset.info.query_decimals(&deps.querier)?;
+
     let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
         match offer_decimal.cmp(&return_decimal) {
             Ordering::Greater => {
