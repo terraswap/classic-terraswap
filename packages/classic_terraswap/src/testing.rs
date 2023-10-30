@@ -107,6 +107,12 @@ fn test_asset_info() {
     let native_token_info: AssetInfo = AssetInfo::NativeToken {
         denom: "uusd".to_string(),
     };
+    let ibc_token_info: AssetInfo = AssetInfo::NativeToken {
+        denom: "ibc/7F8A299575858D452509369851605DCD9D4595EB967E805388347FD54852AA62".to_string(),
+    };
+    let invaild_ibc_token_info: AssetInfo = AssetInfo::NativeToken {
+        denom: "ibc/7".to_string(),
+    };
 
     assert!(!token_info.equal(&native_token_info));
 
@@ -120,6 +126,12 @@ fn test_asset_info() {
 
     assert!(native_token_info.is_native_token());
     assert!(!token_info.is_native_token());
+    assert!(ibc_token_info.is_native_token());
+
+    assert!(ibc_token_info.is_ibc_token());
+    assert!(!invaild_ibc_token_info.is_ibc_token());
+    assert!(!native_token_info.is_ibc_token());
+    assert!(!native_token_info.is_ibc_token());
 
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),

@@ -1,3 +1,4 @@
+use lazy_regex::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -9,6 +10,8 @@ use cosmwasm_std::{
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
+
+pub static REX: Lazy<Regex> = lazy_regex!("^ibc/[a-fA-F0-9]{64}$");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
@@ -32,6 +35,10 @@ impl Asset {
     pub fn compute_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
+            if self.info.is_ibc_token() {
+                return Ok(Uint128::zero());
+            }
+
             let terra_querier = TerraQuerier::new(querier);
             let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
             let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
@@ -164,6 +171,20 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
+
+    pub fn is_ibc_token(&self) -> bool {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                if REX.is_match(denom) {
+                    return true;
+                }
+
+                false
+            }
+            AssetInfo::Token { .. } => false,
+        }
+    }
+
     pub fn query_pool(
         &self,
         querier: &QuerierWrapper<TerraQuery>,
