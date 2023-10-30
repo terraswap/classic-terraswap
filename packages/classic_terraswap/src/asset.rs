@@ -11,7 +11,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-pub static REX: Lazy<Regex> = lazy_regex!("^ibc/[a-fA-F0-9]{64}$");
+pub static REX: Lazy<Regex> = lazy_regex!("^ibc/[A-F0-9]{64}$");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
