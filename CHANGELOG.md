@@ -1,3 +1,7 @@
+# 2.8.0
+
+* [39d869](https://github.com/terraswap/classic-terraswap/pull/16/commits/39d869e9056d92a3094b1995b032e93fe7068ddb) Do not deduct tax in ibc token
+
 # 2.7.0
 
 * [a189de](https://github.com/terraswap/classic-terraswap/pull/15/commits/a189de88440f5a26e4104aa950fddbcb259a457e) Prevention of share calculation overflow
