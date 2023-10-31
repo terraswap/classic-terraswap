@@ -1,3 +1,4 @@
+use classic_terraswap::asset::IBC_REX;
 use cosmwasm_std::{Decimal, Decimal256, QuerierWrapper, StdResult, Uint128, Uint256};
 use std::ops::Mul;
 
@@ -10,6 +11,10 @@ pub fn compute_tax(
     amount: Uint128,
     denom: String,
 ) -> StdResult<Uint128> {
+    if IBC_REX.is_match(&denom) {
+        return Ok(Uint128::zero());
+    }
+
     let terra_querier = TerraQuerier::new(querier);
     let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
     let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom)?).cap;
@@ -27,6 +32,10 @@ pub fn compute_reverse_tax(
     amount: Uint128,
     denom: String,
 ) -> StdResult<Uint128> {
+    if IBC_REX.is_match(&denom) {
+        return Ok(Uint128::zero());
+    }
+
     let terra_querier = TerraQuerier::new(querier);
     let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
     let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom)?).cap;

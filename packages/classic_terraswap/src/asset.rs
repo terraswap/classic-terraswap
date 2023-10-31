@@ -1,3 +1,4 @@
+use lazy_regex::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -9,6 +10,8 @@ use cosmwasm_std::{
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
+
+pub static IBC_REX: Lazy<Regex> = lazy_regex!("^ibc/[A-F0-9]{64}$");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
@@ -32,6 +35,10 @@ impl Asset {
     pub fn compute_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Uint128> {
         let amount = self.amount;
         if let AssetInfo::NativeToken { denom } = &self.info {
+            if self.info.is_ibc_token() {
+                return Ok(Uint128::zero());
+            }
+
             let terra_querier = TerraQuerier::new(querier);
             let tax_rate: Decimal = (terra_querier.query_tax_rate()?).rate;
             let tax_cap: Uint128 = (terra_querier.query_tax_cap(denom.to_string())?).cap;
@@ -140,8 +147,8 @@ pub enum AssetInfo {
 impl fmt::Display for AssetInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
-            AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
+            AssetInfo::NativeToken { denom } => write!(f, "{denom}"),
+            AssetInfo::Token { contract_addr } => write!(f, "{contract_addr}"),
         }
     }
 }
@@ -164,6 +171,20 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
+
+    pub fn is_ibc_token(&self) -> bool {
+        match self {
+            AssetInfo::NativeToken { denom } => {
+                if IBC_REX.is_match(denom) {
+                    return true;
+                }
+
+                false
+            }
+            AssetInfo::Token { .. } => false,
+        }
+    }
+
     pub fn query_pool(
         &self,
         querier: &QuerierWrapper<TerraQuery>,

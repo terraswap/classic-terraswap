@@ -20,7 +20,7 @@ use classic_terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
-use classic_terraswap::util::assert_deadline;
+use classic_terraswap::util::{assert_deadline, migrate_version};
 use cw20::Cw20ReceiveMsg;
 use std::collections::HashMap;
 
@@ -216,8 +216,7 @@ fn assert_minimum_receive(
 
     if swap_amount < minium_receive {
         return Err(StdError::generic_err(format!(
-            "assertion failed; minimum receive amount: {}, swap amount: {}",
-            minium_receive, swap_amount
+            "assertion failed; minimum receive amount: {minium_receive}, swap amount: {swap_amount}",
         )));
     }
 
@@ -638,8 +637,19 @@ fn test_invalid_operations() {
     .is_err());
 }
 
+const TARGET_CONTRACT_VERSION: &str = "0.1.0";
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> StdResult<Response<TerraMsg>> {
+    migrate_version(
+        deps,
+        TARGET_CONTRACT_VERSION,
+        CONTRACT_NAME,
+        CONTRACT_VERSION,
+    )?;
+
     Ok(Response::default())
 }
