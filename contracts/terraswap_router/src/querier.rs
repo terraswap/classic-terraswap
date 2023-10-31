@@ -1,4 +1,4 @@
-use classic_terraswap::asset::REX;
+use classic_terraswap::asset::IBC_REX;
 use cosmwasm_std::{Decimal, Decimal256, QuerierWrapper, StdResult, Uint128, Uint256};
 use std::ops::Mul;
 
@@ -11,7 +11,7 @@ pub fn compute_tax(
     amount: Uint128,
     denom: String,
 ) -> StdResult<Uint128> {
-    if REX.is_match(&denom) {
+    if IBC_REX.is_match(&denom) {
         return Ok(Uint128::zero());
     }
 
@@ -32,7 +32,7 @@ pub fn compute_reverse_tax(
     amount: Uint128,
     denom: String,
 ) -> StdResult<Uint128> {
-    if REX.is_match(&denom) {
+    if IBC_REX.is_match(&denom) {
         return Ok(Uint128::zero());
     }
 

@@ -11,7 +11,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-pub static REX: Lazy<Regex> = lazy_regex!("^ibc/[A-F0-9]{64}$");
+pub static IBC_REX: Lazy<Regex> = lazy_regex!("^ibc/[A-F0-9]{64}$");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Asset {
@@ -175,7 +175,7 @@ impl AssetInfo {
     pub fn is_ibc_token(&self) -> bool {
         match self {
             AssetInfo::NativeToken { denom } => {
-                if REX.is_match(denom) {
+                if IBC_REX.is_match(denom) {
                     return true;
                 }
 
